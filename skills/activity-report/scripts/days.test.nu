@@ -8,33 +8,6 @@ use std/assert
 
 use ./lib/fixtures.testlib.nu *
 
-def "test a day keeps its final replies past midnight until the next prompt" [] {
-  let dir = (mktemp --directory)
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-prompt "/work/app" "10:00" "start")
-    (claude-reply "/work/app" "10:05" "working")
-    (claude-tool "/work/app" "10:06" "Edit" {
-      file_path: "/work/app/a.nu"
-      old_string: "a"
-      new_string: "b"
-      replace_all: false
-    })
-    (claude-notification "/work/app" "10:08")
-    (claude-reply "/work/app" "10:12" "started")
-    (claude-prompt "/work/app" "10:15" "ship it")
-    (claude-reply "/work/app" "2026-10-16T00:30" "merged")
-    (claude-prompt "/work/app" "2026-10-16T09:00" "next")
-    (claude-reply "/work/app" "2026-10-16T09:05" "tomorrow")
-  ]
-
-  let day = (digest-day $dir)
-
-  assert equal ($day.sessions.0.replies | select at text) [
-    {at: "10:12", text: "started"}
-    {at: "00:30", text: "merged"}
-  ]
-}
-
 def "test turns no prompt started become runs" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
@@ -106,6 +79,33 @@ def "test agent time belongs to the day its turn started" [] {
   let day = (digest-day $dir)
 
   assert equal $day.runs.0.agent 2.0
+}
+
+def "test a day keeps its final replies past midnight until the next prompt" [] {
+  let dir = (mktemp --directory)
+  transcript $dir ["claude/projects/app/a.jsonl"] [
+    (claude-prompt "/work/app" "10:00" "start")
+    (claude-reply "/work/app" "10:05" "working")
+    (claude-tool "/work/app" "10:06" "Edit" {
+      file_path: "/work/app/a.nu"
+      old_string: "a"
+      new_string: "b"
+      replace_all: false
+    })
+    (claude-notification "/work/app" "10:08")
+    (claude-reply "/work/app" "10:12" "started")
+    (claude-prompt "/work/app" "10:15" "ship it")
+    (claude-reply "/work/app" "2026-10-16T00:30" "merged")
+    (claude-prompt "/work/app" "2026-10-16T09:00" "next")
+    (claude-reply "/work/app" "2026-10-16T09:05" "tomorrow")
+  ]
+
+  let day = (digest-day $dir)
+
+  assert equal ($day.sessions.0.replies | select at text) [
+    {at: "10:12", text: "started"}
+    {at: "00:30", text: "merged"}
+  ]
 }
 
 def "test a delegate turn on a later day continues its prompt there" [] {

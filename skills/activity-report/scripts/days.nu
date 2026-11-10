@@ -9,29 +9,6 @@ use ./repos.nu [shares]
 use ./units.nu [agent-hours]
 
 # --------------------------------------------------------------------------------------------------
-# Events
-# --------------------------------------------------------------------------------------------------
-
-def stamp [excerpt_chars: int]: record -> record {
-  let event = $in
-  {
-    at: ($event.ts | format date "%H:%M")
-    text: ($event.text | excerpt $excerpt_chars)
-  }
-}
-
-# A turn's final reply is the last one before the next prompt.
-def final-replies []: list -> list {
-  let events = ($in | where kind in ["prompt" "reply"])
-  $events
-  | enumerate
-  | where {|e|
-    $e.item.kind == "reply" and ($events | get -o ($e.index + 1) | get -o kind) != "reply"
-  }
-  | get item
-}
-
-# --------------------------------------------------------------------------------------------------
 # Runs
 # --------------------------------------------------------------------------------------------------
 
@@ -74,6 +51,29 @@ def agent-run [
 }
 
 # --------------------------------------------------------------------------------------------------
+# Events
+# --------------------------------------------------------------------------------------------------
+
+# A turn's final reply is the last one before the next prompt.
+def final-replies []: list -> list {
+  let events = ($in | where kind in ["prompt" "reply"])
+  $events
+  | enumerate
+  | where {|e|
+    $e.item.kind == "reply" and ($events | get -o ($e.index + 1) | get -o kind) != "reply"
+  }
+  | get item
+}
+
+def stamp [excerpt_chars: int]: record -> record {
+  let event = $in
+  {
+    at: ($event.ts | format date "%H:%M")
+    text: ($event.text | excerpt $excerpt_chars)
+  }
+}
+
+# --------------------------------------------------------------------------------------------------
 # Days
 # --------------------------------------------------------------------------------------------------
 
@@ -104,7 +104,7 @@ export def day [
     | sort-by at
   )
 
-  let sessions = (
+  let listed = (
     (($today | get transcript) ++ ($later | get transcript))
     | uniq
     | each {|transcript|
@@ -149,7 +149,7 @@ export def day [
   {
     date: ($start | format date "%Y-%m-%d")
     weekday: ($start | format date "%a")
-    sessions: $sessions
+    sessions: $listed
     runs: $runs
   }
 }

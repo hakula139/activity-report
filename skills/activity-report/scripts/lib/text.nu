@@ -21,7 +21,6 @@ export def content-text []: any -> string {
 # Cut text to a number of characters, or keep it whole when the number is zero.
 export def excerpt [chars: int]: string -> string {
   let text = $in
-
   if $chars == 0 {
     $text
   } else {

@@ -7,7 +7,7 @@ The command and its tests are Nushell. General Nushell conventions and traps liv
 - **Entry point**: `skills/activity-report/scripts/activity-digest.nu` holds `def main`, checks its arguments, and orders the pipeline, and the tests drive it through `$nu.current-exe`.
 - **Modules**: `transcripts.nu` reads transcripts and projects turns, `repos.nu` resolves repositories and shares, `units.nu` computes credit and agent time, `days.nu` shapes a day, `lib/text.nu` holds message text and excerpts, and `stores/{claude,codex,omp}.nu` map one assistant's records to events. A module exports what its callers use and keeps every other helper private.
 - **Dependencies**: `stores/*` import `transcripts` and `lib/text`, `transcripts` imports `repos`, `units` imports `repos` and `lib/text`, and `days` imports `units`, `repos`, and `lib/text`. The entry imports the stores, `repos`, `units`, and `days`.
-- **Order**: within a module, order functions as its entry first calls them, callees before callers.
+- **Order**: order a module's sections as the pipeline first reaches them, and within a section put callees before callers.
 - **Config**: the tests build the config as a record and save it as JSON.
 - **External tools**: the command calls `git` at a directory and `zstd` on a compressed transcript.
 - **Quote style**: use double quotes, switching to single quotes when the text holds a literal backslash or double quote.
