@@ -1,6 +1,13 @@
 # Design
 
-`activity-digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates. It reads assistant state, projects each session into turns, links those turns into units owned by a prompt, and measures the human and agent time each unit earned. This page records the invariants behind that projection.
+`activity-digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates. It:
+
+- reads assistant state
+- projects each session into turns
+- links those turns into units owned by a prompt
+- measures the human and agent time each unit earned
+
+This page records the invariants behind that projection.
 
 ## Inputs
 
@@ -28,7 +35,13 @@ Each transcript becomes a session with `id`, `cwd`, `attended`, `parent`, and `e
 
 A turn starts at a prompt or trigger, ends at its first reply or its last model output, and collects the writes that follow its start. Every turn adds its own time, so a parallel delegate spends its own time.
 
-`attended` is false for headless runs (`codex exec`, MCP, SDK entrypoints), sidechains, and Codex sessions whose `thread_source` is not `user`, and false when `cwd` matches an entry in `excludedDirs`. Only an attended session's prompts earn human hours.
+`attended` is false for:
+
+- headless runs (`codex exec`, MCP, SDK entrypoints)
+- sidechains
+- Codex sessions whose `thread_source` is not `user`
+
+It is also false when `cwd` matches an entry in `excludedDirs`. Only an attended session's prompts earn human hours.
 
 ## Units
 
@@ -51,9 +64,22 @@ A unit's `repos` splits its distinct written files among the repositories, round
 
 A day covers `[00:00, next 00:00)` in local time and lists:
 
-- **sessions**: each session with a prompt credited that day or a continuation that day, with its prompts for the day, the final replies from its first prompt that day until its next prompt on a later day, and its continuations. A session listed only through a continuation has no prompts and no replies.
+- **sessions**: each session with a prompt credited that day or a continuation that day, holding:
+
+  - its prompts for the day
+  - the final replies from its first prompt that day until its next prompt on a later day
+  - its continuations
+
+  A session listed only through a continuation has no prompts and no replies.
+
 - **runs**: agent work that no prompt started, with turns started that day.
 
-The top level repeats `labels`, maps each repository name in the output to its root in `repositories`, and holds one entry per date in `days`. A repeated directory name keeps the first root found.
+The top level:
+
+- repeats `labels`
+- maps each repository name in the output to its root in `repositories`
+- holds one entry per date in `days`
+
+A repeated directory name keeps the first root found.
 
 The field reference lives in `skills/activity-report/references/output.md`, so it changes with the output.

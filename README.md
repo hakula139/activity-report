@@ -7,9 +7,24 @@ Reconstruct what you worked on over a date range, with human and agent hours per
 
 ## The problem
 
-Coding agents already record what happened. Each session stores its working directory, every prompt and answer, the files it wrote, and which subagents or workers it started. That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
+Coding agents already record what happened. Each session stores:
 
-`activity-digest` reads those stores and prints one JSON document for a range of local dates. For each day it lists the sessions, their prompts, the reply each prompt produced, work that no prompt started, and the repositories those turns wrote. The [agent skill](#agent-skill) turns that evidence into an hours-by-project and hours-by-task report.
+- its working directory
+- every prompt and answer
+- the files it wrote
+- which subagents or workers it started
+
+That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
+
+`activity-digest` reads those stores and prints one JSON document for a range of local dates. For each day it lists:
+
+- the sessions
+- their prompts
+- the reply each prompt produced
+- work that no prompt started
+- the repositories those turns wrote
+
+The [agent skill](#agent-skill) turns that evidence into an hours-by-project and hours-by-task report.
 
 ## Install
 
@@ -65,7 +80,15 @@ The command takes a JSON config file through `--config`:
 | `agentIdleMinutes` | Longest gap in minutes between a turn's records before the rest of the turn earns no time        |
 | `assistantDirs`    | Absolute state directories for `claude`, `codex`, and `omp`                                      |
 
-Claude Code honors `CLAUDE_CONFIG_DIR`, Codex honors `CODEX_HOME`, and OMP keeps its state under `~/.omp/agent`. Use the absolute paths that apply to the account that ran the sessions.
+By default, each assistant reads its state from the following directory:
+
+| Assistant   | State directory                       |
+| ----------- | ------------------------------------- |
+| Claude Code | `CLAUDE_CONFIG_DIR`, else `~/.claude` |
+| Codex       | `CODEX_HOME`, else `~/.codex`         |
+| OMP         | `~/.omp/agent`                        |
+
+Use the absolute paths that apply to the account that ran the sessions.
 
 ## Usage
 
@@ -99,7 +122,13 @@ Releases follow the [versioning policy](RELEASING.md#versioning), and stable rel
 
 ## Agent skill
 
-The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. The skill assumes the command discovers its configuration, which arrives in a later release.
+The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that:
+
+- reads the digest
+- gathers repository, forge, calendar, and screen-history evidence
+- writes the report
+
+The skill assumes the command discovers its configuration, which arrives in a later release.
 
 Link or copy the whole directory, never `SKILL.md` alone, because Codex skips a `SKILL.md` that is itself a symlink. Start a new assistant session after linking.
 
