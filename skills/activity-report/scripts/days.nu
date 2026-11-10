@@ -9,31 +9,6 @@ use ./repos.nu [shares]
 use ./units.nu [agent-hours]
 
 # --------------------------------------------------------------------------------------------------
-# Events
-# --------------------------------------------------------------------------------------------------
-
-def stamp [excerpt_chars: int]: record -> record {
-  let event = $in
-
-  {
-    at: ($event.ts | format date "%H:%M")
-    text: ($event.text | excerpt $excerpt_chars)
-  }
-}
-
-# A turn's final reply is the last one before the next prompt.
-def final-replies []: list -> list {
-  let events = ($in | where kind in ["prompt" "reply"])
-
-  $events
-  | enumerate
-  | where {|e|
-    $e.item.kind == "reply" and ($events | get -o ($e.index + 1) | get -o kind) != "reply"
-  }
-  | get item
-}
-
-# --------------------------------------------------------------------------------------------------
 # Runs
 # --------------------------------------------------------------------------------------------------
 
@@ -62,7 +37,6 @@ def agent-run [
       | get -o 0
       | default ""
     )
-
     {
       tool: $session.tool
       session: $session.id
@@ -73,6 +47,29 @@ def agent-run [
       repos: ($paths | shares $repos $ignored)
       text: ($text | excerpt $excerpt_chars)
     }
+  }
+}
+
+# --------------------------------------------------------------------------------------------------
+# Events
+# --------------------------------------------------------------------------------------------------
+
+# A turn's final reply is the last one before the next prompt.
+def final-replies []: list -> list {
+  let events = ($in | where kind in ["prompt" "reply"])
+  $events
+  | enumerate
+  | where {|e|
+    $e.item.kind == "reply" and ($events | get -o ($e.index + 1) | get -o kind) != "reply"
+  }
+  | get item
+}
+
+def stamp [excerpt_chars: int]: record -> record {
+  let event = $in
+  {
+    at: ($event.ts | format date "%H:%M")
+    text: ($event.text | excerpt $excerpt_chars)
   }
 }
 
@@ -101,60 +98,58 @@ export def day [
     | where {|unit| $unit.unit not-in $prompt_units }
     | each {|unit|
       let session = ($sessions | where transcript == $unit.unit | first)
-
       agent-run $cfg $start $session $unit.turns $repos $ignored $excerpt_chars
     }
     | compact
     | sort-by at
   )
 
+  let listed = (
+    (($today | get transcript) ++ ($later | get transcript))
+    | uniq
+    | each {|transcript|
+      let s = ($sessions | where transcript == $transcript | first)
+      let prompts = ($today | where transcript == $transcript)
+      let events = if ($prompts | is-empty) {
+        []
+      } else {
+        # Turns started today keep their replies past midnight, until the next prompt.
+        let first = ($prompts | first | get ts)
+        let next = ($s.turns | where kind == "prompt" and ts >= $end | get -o 0.ts)
+        $s.events | where {|e| $e.ts >= $first and ($next == null or $e.ts < $next) }
+      }
+
+      {
+        tool: $s.tool
+        session: $s.id
+        cwd: $s.cwd
+        repo: $s.repo
+        prompts: (
+          $prompts
+          | each {|p|
+            {
+              at: ($p.ts | format date "%H:%M")
+              hours: $p.hours
+              agent: $p.agent
+              repos: $p.repos
+              text: ($p.text | excerpt $excerpt_chars)
+            }
+          }
+        )
+        replies: ($events | final-replies | each { stamp $excerpt_chars } | where text != "")
+        continued: (
+          $later
+          | where transcript == $transcript
+          | select from text agent repos
+        )
+      }
+    }
+  )
+
   {
     date: ($start | format date "%Y-%m-%d")
     weekday: ($start | format date "%a")
-    sessions: (
-      (($today | get transcript) ++ ($later | get transcript))
-      | uniq
-      | each {|transcript|
-        let s = ($sessions | where transcript == $transcript | first)
-        let prompts = ($today | where transcript == $transcript)
-        let events = if ($prompts | is-empty) {
-          []
-        } else {
-          # Turns started today keep their replies past midnight, until the next prompt.
-          let first = ($prompts | first | get ts)
-          let next = ($s.turns | where kind == "prompt" and ts >= $end | get -o 0.ts)
-
-          $s.events | where {|e| $e.ts >= $first and ($next == null or $e.ts < $next) }
-        }
-
-        {
-          tool: $s.tool
-          session: $s.id
-          cwd: $s.cwd
-          repo: $s.repo
-          prompts: (
-            $prompts
-            | each {|p|
-              {
-                at: ($p.ts | format date "%H:%M")
-                hours: $p.hours
-                agent: $p.agent
-                repos: $p.repos
-                text: ($p.text | excerpt $excerpt_chars)
-              }
-            }
-          )
-
-          replies: ($events | final-replies | each { stamp $excerpt_chars } | where text != "")
-          continued: (
-            $later
-            | where transcript == $transcript
-            | select from text agent repos
-          )
-        }
-      }
-    )
-
+    sessions: $listed
     runs: $runs
   }
 }

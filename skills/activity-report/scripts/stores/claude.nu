@@ -7,40 +7,12 @@
 use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
 
-# The transcript of the session that delegated to a Claude session, or null. A subagent names its
-# parent agent, and otherwise its lead. A teammate names its lead's session id.
-def claude-parent [cfg: record, records: list, file: string]: nothing -> any {
-  let dir = ($file | path dirname)
-
-  if ($dir | path basename) == "subagents" {
-    let meta_file = ($file | str replace --regex '\.jsonl$' ".meta.json")
-    let meta = (open --raw $meta_file | from json)
-    let parent_agent = ($meta | get -o parentAgentId)
-
-    if $parent_agent != null {
-      $dir | path join $"agent-($parent_agent).jsonl"
-    } else {
-      $"($dir | path dirname).jsonl"
-    }
-  } else {
-    let team = ($records | get -o teamName | compact | get -o 0)
-
-    if $team == null or not ($team | str starts-with "session-") {
-      null
-    } else {
-      let id = ($team | str replace "session-" "")
-
-      glob $"($cfg.assistantDirs.claude)/projects/*/($id)*.jsonl" | get -o 0
-    }
-  }
-}
-
-def claude-human [r: record]: nothing -> bool {
+def human [r: record]: nothing -> bool {
   $r.origin?.kind? == "human"
 }
 
 # A question's answers become a prompt, one `question: answer` line per entry.
-def claude-question [r: record]: nothing -> any {
+def question [r: record]: nothing -> any {
   let result = $r.toolUseResult?
 
   if not ($result | describe | str starts-with "record") {
@@ -57,18 +29,12 @@ def claude-question [r: record]: nothing -> any {
       | items {|question, answer| $"($question): ($answer)" }
       | str join "\n"
     )
-
     {kind: "prompt", ts: $r.timestamp, text: $text}
   }
 }
 
-# Subagents end their run with a SubagentHandback call in place of a final text reply.
-def claude-reply [r: record]: nothing -> bool {
-  $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
-}
-
 # Absolute paths a Claude record wrote: Edit and Write name a file, NotebookEdit a notebook.
-def claude-writes [r: record]: nothing -> list<string> {
+def writes [r: record]: nothing -> list<string> {
   let part = ($r.message.content | get -o 0)
 
   if (
@@ -86,6 +52,37 @@ def claude-writes [r: record]: nothing -> list<string> {
   }
 }
 
+# Subagents end their run with a SubagentHandback call in place of a final text reply.
+def reply [r: record]: nothing -> bool {
+  $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
+}
+
+# The transcript of the session that delegated to a Claude session, or null. A subagent names its
+# parent agent, and otherwise its lead. A teammate names its lead's session id.
+def parent [cfg: record, records: list, file: string]: nothing -> any {
+  let dir = ($file | path dirname)
+
+  if ($dir | path basename) == "subagents" {
+    let meta_file = ($file | str replace --regex '\.jsonl$' ".meta.json")
+    let meta = (open --raw $meta_file | from json)
+    let parent_agent = ($meta | get -o parentAgentId)
+    if $parent_agent != null {
+      $dir | path join $"agent-($parent_agent).jsonl"
+    } else {
+      $"($dir | path dirname).jsonl"
+    }
+  } else {
+    let team = ($records | get -o teamName | compact | get -o 0)
+
+    if $team == null or not ($team | str starts-with "session-") {
+      null
+    } else {
+      let id = ($team | str replace "session-" "")
+      glob $"($cfg.assistantDirs.claude)/projects/*/($id)*.jsonl" | get -o 0
+    }
+  }
+}
+
 export def sessions [cfg: record, since: datetime]: nothing -> list {
   let globs = ["projects/*/*.jsonl" "projects/*/*/subagents/*.jsonl"]
 
@@ -96,30 +93,27 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
       return null
     }
 
-    let entrypoint = ($records | get -o entrypoint | compact | get -o 0 | default "")
     let events = (
       $records
       | each {|r|
         let event = if $r.isCompactSummary? == true {
           null
         } else if $r.type == "user" and $r.toolUseResult? == null {
-          let kind = if (claude-human $r) { "prompt" } else { "trigger" }
-
+          let kind = if (human $r) { "prompt" } else { "trigger" }
           {kind: $kind, ts: $r.timestamp, text: ($r.message.content | content-text)}
         } else if (
           $r.type == "attachment"
           and $r.attachment.type? == "queued_command"
-          and (claude-human $r.attachment)
+          and (human $r.attachment)
         ) {
           {kind: "prompt", ts: $r.timestamp, text: ($r.attachment.prompt | content-text)}
         } else if $r.type == "user" {
-          claude-question $r
+          question $r
         } else if $r.type == "assistant" {
-          let paths = (claude-writes $r)
-
+          let paths = (writes $r)
           if ($paths | is-not-empty) {
             {kind: "write", ts: $r.timestamp, paths: $paths}
-          } else if (claude-reply $r) {
+          } else if (reply $r) {
             {kind: "reply", ts: $r.timestamp, text: ($r.message.content | content-text)}
           }
         }
@@ -135,14 +129,14 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
     )
 
     let id = ($file | path parse | get stem)
+    let entrypoint = ($records | get -o entrypoint | compact | get -o 0 | default "")
     let headless = ($entrypoint | str starts-with "sdk")
     let attended = ((not $headless) and ($records.0.isSidechain? != true))
-
     {
       id: $id
       cwd: $cwd
       attended: $attended
-      parent: (claude-parent $cfg $records $file)
+      parent: (parent $cfg $records $file)
       events: $events
     }
   }

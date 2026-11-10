@@ -11,7 +11,7 @@
 # The main checkout of a deleted sibling worktree, `<root>/<name>` for `<root>/<name>__worktrees`,
 # or null outside that layout.
 def worktrees-main [dir: string]: nothing -> any {
-  $dir | parse --regex '^(?<main>.+)__worktrees/' | get -o 0.main
+  $dir | parse --regex "^(?<main>.+)__worktrees/" | get -o 0.main
 }
 
 # The nearest existing ancestor of a directory without resolving a sibling worktree, so a deleted
@@ -21,7 +21,6 @@ def literal-ancestor [dir: string]: nothing -> any {
     $dir
   } else {
     let parent = ($dir | path dirname)
-
     if $parent == $dir {
       null
     } else {
@@ -34,7 +33,6 @@ def literal-ancestor [dir: string]: nothing -> any {
 def existing-ancestor [dir: string]: nothing -> any {
   let ancestor = (literal-ancestor $dir)
   let main = (worktrees-main $dir)
-
   if (
     $main != null
     and not ($ancestor | str starts-with $"($main)__worktrees/")
@@ -55,8 +53,18 @@ def inside-checkout [path: string, checkout: string]: nothing -> bool {
   } else {
     let root = ($checkout | path expand)
     let resolved = ($ancestor | path expand)
-
     $resolved == $root or ($resolved | str starts-with $"($root)/")
+  }
+}
+
+# A written path with its existing directory resolved, so a symlinked parent names the directory the
+# write lands in.
+export def physical [path: string]: nothing -> string {
+  let dir = ($path | path dirname)
+  if ($dir | path exists) {
+    $dir | path expand | path join ($path | path basename)
+  } else {
+    $path
   }
 }
 
@@ -82,7 +90,6 @@ def repository-of [dir: string]: nothing -> any {
     null
   } else {
     let parts = ($run.stdout | lines)
-
     {
       checkout: $parts.2
       root: (if $parts.0 == $parts.1 {
@@ -105,7 +112,6 @@ export def repository-map [dirs: list<string>]: nothing -> record {
     | uniq
     | reduce --fold {} {|ancestor, acc| $acc | insert $ancestor (repository-of $ancestor) }
   )
-
   $pairs | reduce --fold {} {|pair, acc| $acc | insert $pair.dir ($found | get -o $pair.ancestor) }
 }
 
@@ -115,18 +121,6 @@ export def repo-name [repo: any]: nothing -> any {
     null
   } else {
     $repo.root | path basename
-  }
-}
-
-# A written path with its existing directory resolved, so a symlinked parent names the directory the
-# write lands in.
-export def physical [path: string]: nothing -> string {
-  let dir = ($path | path dirname)
-
-  if ($dir | path exists) {
-    $dir | path expand | path join ($path | path basename)
-  } else {
-    $path
   }
 }
 
@@ -190,7 +184,6 @@ export def shares [repos: record, ignored: list<string>]: list<string> -> record
   }
 
   let total = ($counts | get count | math sum)
-
   $counts
   | each {|count| {repo: $count.value, share: ($count.count / $total | math round --precision 2)} }
   | sort-by share --reverse
@@ -209,7 +202,6 @@ export def repositories [repos: record, names: list<string>]: nothing -> record 
   $names
   | reduce --fold {} {|name, acc|
     let root = ($found | where {|repo| ($repo.root | path basename) == $name } | get -o 0.root)
-
     if $root == null {
       $acc
     } else {

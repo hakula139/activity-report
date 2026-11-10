@@ -8,7 +8,7 @@ use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
 
 # An OMP call writes one path, and its patch form names a path per `[<path>#<hash>]` header.
-def omp-paths [cwd: string, call: record]: nothing -> list<string> {
+def call-paths [cwd: string, call: record]: nothing -> list<string> {
   let args = ($call.arguments | default {})
   let paths = (
     [($args.path?)]
@@ -23,7 +23,6 @@ def omp-paths [cwd: string, call: record]: nothing -> list<string> {
       }
     )
   )
-
   $paths
   | compact
   | each {|path| $cwd | path join $path | path expand --no-symlink }
@@ -43,7 +42,6 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
 
           if $m.role == "user" {
             let kind = if $m.attribution? == "user" { "prompt" } else { "trigger" }
-
             {kind: $kind, ts: $r.timestamp, text: ($m.content | content-text)}
           } else if $m.role == "assistant" and $m.stopReason? == "stop" {
             {kind: "reply", ts: $r.timestamp, text: ($m.content | content-text)}
@@ -51,10 +49,9 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
             let paths = (
               $m.content
               | where {|part| $part.type? == "toolCall" and $part.name in ["write" "edit"] }
-              | each {|part| omp-paths $cwd $part }
+              | each {|part| call-paths $cwd $part }
               | flatten
             )
-
             if ($paths | is-not-empty) {
               {kind: "write", ts: $r.timestamp, paths: $paths}
             }

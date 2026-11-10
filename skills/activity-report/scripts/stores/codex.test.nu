@@ -92,33 +92,6 @@ def "test Codex request headings are stripped from prompts" [] {
   }
 }
 
-def "test both forms of an archived Codex session read once" [] {
-  let dir = (mktemp --directory)
-  let app = (git-repo $dir "app")
-  let meta = {id: "both", cwd: $app, thread_source: "user"}
-  let records = (codex-turn "11:00" "review it" --done "11:10")
-  codex-transcript $dir $meta $records --archived --compressed
-  codex-transcript $dir $meta $records --archived
-
-  let day = (digest-day $dir)
-
-  assert equal ($day.sessions | length) 1
-  assert equal $day.sessions.0.prompts.0.agent 0.1664
-}
-
-def "test a Codex turn starts at its prompt" [] {
-  let dir = (mktemp --directory)
-  let app = (git-repo $dir "app")
-  codex-transcript $dir {id: "lead", cwd: $app, thread_source: "user"} (
-    codex-turn "11:00" "review it" --done "11:10"
-  )
-
-  let day = (digest-day $dir)
-
-  assert equal $day.runs []
-  assert equal $day.sessions.0.prompts.0.agent 0.1664
-}
-
 def "test a Codex subagent finds its parent in archived sessions" [] {
   for compressed in [false true] {
     let dir = (mktemp --directory)
@@ -144,4 +117,31 @@ def "test a Codex subagent finds its parent in archived sessions" [] {
     assert equal $day.sessions.0.prompts.0.repos {lib: 1.0} $form
     assert equal $day.runs [] $form
   }
+}
+
+def "test both forms of an archived Codex session read once" [] {
+  let dir = (mktemp --directory)
+  let app = (git-repo $dir "app")
+  let meta = {id: "both", cwd: $app, thread_source: "user"}
+  let records = (codex-turn "11:00" "review it" --done "11:10")
+  codex-transcript $dir $meta $records --archived --compressed
+  codex-transcript $dir $meta $records --archived
+
+  let day = (digest-day $dir)
+
+  assert equal ($day.sessions | length) 1
+  assert equal $day.sessions.0.prompts.0.agent 0.1664
+}
+
+def "test a Codex turn starts at its prompt" [] {
+  let dir = (mktemp --directory)
+  let app = (git-repo $dir "app")
+  codex-transcript $dir {id: "lead", cwd: $app, thread_source: "user"} (
+    codex-turn "11:00" "review it" --done "11:10"
+  )
+
+  let day = (digest-day $dir)
+
+  assert equal $day.runs []
+  assert equal $day.sessions.0.prompts.0.agent 0.1664
 }

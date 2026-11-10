@@ -13,7 +13,6 @@ const REQUEST_HEADING = "## My request( for Codex)?:"
 def strip-request-prefix []: string -> string {
   let text = $in
   let parts = ($text | split row --regex $REQUEST_HEADING)
-
   if ($parts | length) == 1 {
     $text
   } else {
@@ -23,14 +22,13 @@ def strip-request-prefix []: string -> string {
 
 # The transcript of the thread that delegated to a Codex session, or null. Subagents and guardian
 # reviews both carry `parent_thread_id` at the top level of the session metadata.
-def codex-parent [cfg: record, meta: record]: nothing -> any {
+def parent [cfg: record, meta: record]: nothing -> any {
   let id = ($meta | get -o parent_thread_id)
 
   if $id == null {
     null
   } else {
     let base = $cfg.assistantDirs.codex
-
     (
       (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl")
       ++ (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl.zst")
@@ -73,7 +71,6 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
               | content-text
               | strip-request-prefix
             )
-
             {kind: "prompt", ts: $r.timestamp, text: $text}
           } else if $p.type == "item_completed" and $p.item.type? == "FileChange" {
             {kind: "write", ts: $r.timestamp, paths: ($p.item.changes? | default {} | columns)}
@@ -101,12 +98,11 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
 
     # Subagents and reviewers carry other thread sources. `codex exec` and MCP runs are headless.
     let attended = ($meta.thread_source == "user" and $meta.source? not-in ["exec" "mcp"])
-
     {
       id: $meta.id
       cwd: $meta.cwd
       attended: $attended
-      parent: (codex-parent $cfg $meta)
+      parent: (parent $cfg $meta)
       events: $events
     }
   }

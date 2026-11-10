@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # ==================================================================================================
-# Activity Digest: Repository Tests
+# Activity Digest: Repositories Tests
 # ==================================================================================================
 
 use std/assert
@@ -95,34 +95,6 @@ def "test repositories resolve subdirectories and worktrees, and missing paths r
   assert equal $output.repositories {app: $app}
 }
 
-def "test a checkout behind a symlinked parent keeps its writes except ignored ones" [] {
-  let dir = (mktemp --directory)
-  mkdir ($dir | path join "real")
-  let app = (git-repo ($dir | path join "real") "app")
-  mkdir ($app | path join "src")
-  ^ln -s "real" ($dir | path join "lnk")
-  let linked = ($dir | path join "lnk/app")
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-prompt $linked "10:00" "ship it")
-    (claude-tool $linked "10:01" "Write" {
-      file_path: ($linked | path join "src/a.nu")
-      content: "x"
-    })
-    (claude-prompt $linked "10:05" "then the removed directory")
-    (claude-tool $linked "10:06" "Write" {
-      file_path: ($linked | path join ".claude/agent-memory-local/gone/b.nu")
-      content: "x"
-    })
-  ]
-
-  let output = (digest-output $dir)
-  let day = $output.days.0
-
-  assert equal $day.sessions.0.repo "app"
-  assert equal ($day.sessions.0.prompts | get repos) [{app: 1.0} {}]
-  assert equal $output.repositories {app: $app}
-}
-
 def "test a symlink outside a repository credits the repository it points into" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
@@ -183,6 +155,34 @@ def "test writes to git-ignored paths never count" [] {
   let day = (digest-day $dir)
 
   assert equal $day.sessions.0.prompts.0.repos {app: 0.5, lib: 0.5}
+}
+
+def "test a checkout behind a symlinked parent keeps its writes except ignored ones" [] {
+  let dir = (mktemp --directory)
+  mkdir ($dir | path join "real")
+  let app = (git-repo ($dir | path join "real") "app")
+  mkdir ($app | path join "src")
+  ^ln -s "real" ($dir | path join "lnk")
+  let linked = ($dir | path join "lnk/app")
+  transcript $dir ["claude/projects/app/a.jsonl"] [
+    (claude-prompt $linked "10:00" "ship it")
+    (claude-tool $linked "10:01" "Write" {
+      file_path: ($linked | path join "src/a.nu")
+      content: "x"
+    })
+    (claude-prompt $linked "10:05" "then the removed directory")
+    (claude-tool $linked "10:06" "Write" {
+      file_path: ($linked | path join ".claude/agent-memory-local/gone/b.nu")
+      content: "x"
+    })
+  ]
+
+  let output = (digest-output $dir)
+  let day = $output.days.0
+
+  assert equal $day.sessions.0.repo "app"
+  assert equal ($day.sessions.0.prompts | get repos) [{app: 1.0} {}]
+  assert equal $output.repositories {app: $app}
 }
 
 def "test sessions report their repository, and the digest lists labels and repository paths" [] {

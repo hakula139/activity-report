@@ -7,7 +7,7 @@
 # ==================================================================================================
 
 use ./days.nu [day]
-use ./repos.nu [ignored-paths repo-name repository-map repositories]
+use ./repos.nu [ignored-paths repo-name repositories repository-map]
 use ./stores/claude.nu
 use ./stores/codex.nu
 use ./stores/omp.nu
@@ -76,6 +76,7 @@ def main [
       )
     }
   )
+
   let names = (
     (
       ($days | each {|day| $day.sessions | each {|s| $s.repo } })

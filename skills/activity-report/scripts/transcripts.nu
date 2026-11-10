@@ -127,7 +127,6 @@ export def read-sessions [
         | where {|w| ($w.1 - $w.0) > $gap }
         | each {|w| {kind: "pause", ts: $w.0} }
       )
-
       $session
       | insert transcript $file
       | update events { append $pauses }
@@ -146,7 +145,6 @@ export def read-sessions [
         }
       }
     )
-
     $s | merge {
       tool: $tool
       attended: ($s.attended and ($cfg.excludedDirs | all {|pattern| $s.cwd !~ $pattern }))
