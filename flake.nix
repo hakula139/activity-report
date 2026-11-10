@@ -48,8 +48,8 @@
           pname = "activity-report";
           entry = "activity-digest";
           version = "0.0.0";
-          src = ./scripts;
-          skills = [ ./. ];
+          src = ./skills/activity-report/scripts;
+          skills = [ ./skills/activity-report ];
           runtimeInputs = runtimeInputs pkgs;
           meta = {
             description = "Report what you worked on from agent transcripts, with hours per project and task";

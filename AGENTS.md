@@ -15,7 +15,7 @@
 
 - Run the pre-commit hooks on every commit. In each new checkout or worktree, run `nix develop -c true` once to install them. Never bypass the hooks with `--no-verify` or `PRE_COMMIT_ALLOW_NO_CONFIG`, and fix the cause whenever a hook, test, or CI job fails.
 - Wrap code and comments at 100 columns, counting the indent, end section banners at column 100, and keep a single-line string literal whole at any length.
-- Update whatever the change makes stale: the README's usage and configuration, the reference page, and the root `SKILL.md`.
+- Update whatever the change makes stale: the README's usage and configuration, the reference page, and `skills/activity-report/SKILL.md`.
 - Issues, pull requests, and their comments link only public material. Never reference local working notes, private paths, or private repositories. Transcripts hold conversation text, paths, and occasionally secrets, so redact all three from anything you paste.
 
 ## Verification
@@ -32,7 +32,7 @@ Each rule has one home, which other pages link to. Add to this file or `docs/` o
 
 - `README.md` is for a user evaluating or running the tool: the problem it solves, prerequisites, install, configuration, usage, and output. Keep internal progress out.
 - `AGENTS.md` and `docs/` are for whoever changes the code.
-- `docs/reference/` explains how the digest measures activity, while the root `SKILL.md` follows a reader through collecting evidence and writing the report. The skill restates only what an agent needs to run and recover a procedure, since an assistant loads only `SKILL.md` and reads other files when the skill names them.
+- `docs/reference/` explains how the digest measures activity, while `skills/activity-report/SKILL.md` follows a reader through collecting evidence and writing the report. The skill restates only what an agent needs to run and recover a procedure, since an assistant loads only `SKILL.md` and reads other files when the skill names them.
 
 ## Code review
 
