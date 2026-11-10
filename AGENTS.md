@@ -32,7 +32,7 @@ Each rule has one home, which other pages link to. Add to this file or `docs/` o
 
 - `README.md` is for a user evaluating or running the tool: the problem it solves, prerequisites, install, configuration, usage, and output. Keep internal progress out.
 - `AGENTS.md` and `docs/` are for whoever changes the code.
-- `docs/reference/` explains how the digest measures activity, while `skills/activity-report/SKILL.md` follows a reader through collecting evidence and writing the report. The skill restates only what an agent needs to run and recover a procedure, since an assistant loads only `SKILL.md` and reads other files when the skill names them.
+- `docs/reference/` explains how the digest measures activity, while `skills/activity-report/SKILL.md` follows a reader through collecting evidence and writing the report. The skill restates only what an agent needs to run and recover a procedure, since skill-directory installs carry only `skills/activity-report/`.
 
 ## Code review
 

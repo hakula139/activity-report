@@ -97,7 +97,7 @@ The transcript formats change without notice. The digest is tested on Linux agai
 | Codex       | 0.167.0 |
 | OMP         | 18.18.1 |
 
-A newer assistant can add a record kind this command ignores, so that activity then goes uncounted. If a report misses work you know happened, open an issue with the release tag or commit you run and the assistant's version.
+A newer assistant can add a record kind this command ignores, so that activity then goes uncounted. If a report misses work you know happened, open an issue with the release tag or commit you run and the assistant's version. Digest output quotes your prompts, so redact paths, tokens, and conversation text from anything you paste.
 
 ## Releases
 
