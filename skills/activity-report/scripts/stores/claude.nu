@@ -7,32 +7,6 @@
 use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
 
-# The transcript of the session that delegated to a Claude session, or null. A subagent names its
-# parent agent, and otherwise its lead. A teammate names its lead's session id.
-def claude-parent [cfg: record, records: list, file: string]: nothing -> any {
-  let dir = ($file | path dirname)
-
-  if ($dir | path basename) == "subagents" {
-    let meta_file = ($file | str replace --regex '\.jsonl$' ".meta.json")
-    let meta = (open --raw $meta_file | from json)
-    let parent_agent = ($meta | get -o parentAgentId)
-    if $parent_agent != null {
-      $dir | path join $"agent-($parent_agent).jsonl"
-    } else {
-      $"($dir | path dirname).jsonl"
-    }
-  } else {
-    let team = ($records | get -o teamName | compact | get -o 0)
-
-    if $team == null or not ($team | str starts-with "session-") {
-      null
-    } else {
-      let id = ($team | str replace "session-" "")
-      glob $"($cfg.assistantDirs.claude)/projects/*/($id)*.jsonl" | get -o 0
-    }
-  }
-}
-
 def claude-human [r: record]: nothing -> bool {
   $r.origin?.kind? == "human"
 }
@@ -59,11 +33,6 @@ def claude-question [r: record]: nothing -> any {
   }
 }
 
-# Subagents end their run with a SubagentHandback call in place of a final text reply.
-def claude-reply [r: record]: nothing -> bool {
-  $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
-}
-
 # Absolute paths a Claude record wrote: Edit and Write name a file, NotebookEdit a notebook.
 def claude-writes [r: record]: nothing -> list<string> {
   let part = ($r.message.content | get -o 0)
@@ -80,6 +49,37 @@ def claude-writes [r: record]: nothing -> list<string> {
     [$part.input.notebook_path] | compact
   } else {
     [$part.input.file_path] | compact
+  }
+}
+
+# Subagents end their run with a SubagentHandback call in place of a final text reply.
+def claude-reply [r: record]: nothing -> bool {
+  $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
+}
+
+# The transcript of the session that delegated to a Claude session, or null. A subagent names its
+# parent agent, and otherwise its lead. A teammate names its lead's session id.
+def claude-parent [cfg: record, records: list, file: string]: nothing -> any {
+  let dir = ($file | path dirname)
+
+  if ($dir | path basename) == "subagents" {
+    let meta_file = ($file | str replace --regex '\.jsonl$' ".meta.json")
+    let meta = (open --raw $meta_file | from json)
+    let parent_agent = ($meta | get -o parentAgentId)
+    if $parent_agent != null {
+      $dir | path join $"agent-($parent_agent).jsonl"
+    } else {
+      $"($dir | path dirname).jsonl"
+    }
+  } else {
+    let team = ($records | get -o teamName | compact | get -o 0)
+
+    if $team == null or not ($team | str starts-with "session-") {
+      null
+    } else {
+      let id = ($team | str replace "session-" "")
+      glob $"($cfg.assistantDirs.claude)/projects/*/($id)*.jsonl" | get -o 0
+    }
   }
 }
 

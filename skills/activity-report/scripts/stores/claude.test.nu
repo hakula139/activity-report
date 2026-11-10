@@ -39,22 +39,6 @@ def "test only prompts a person typed count" [] {
   ]
 }
 
-def "test a renamed lead session keeps its prompts" [] {
-  let dir = (mktemp --directory)
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    {type: "agent-name", agentName: "design-log", sessionId: "a"}
-    (claude-prompt "/work/app" "10:00" "start")
-    (claude-reply "/work/app" "10:20" "done")
-  ]
-
-  let day = (digest-day $dir)
-
-  assert equal ($day.sessions | each {|s| $s.prompts | select at hours }) [
-    [{at: "10:00", hours: 0.5}]
-  ]
-  assert equal $day.runs []
-}
-
 def "test an answered question earns a prompt and a timed-out one earns none" [] {
   let dir = (mktemp --directory)
   transcript $dir ["claude/projects/app/a.jsonl"] [
@@ -93,6 +77,22 @@ def "test only a record tool result can be a question" [] {
   let day = (digest-day $dir)
 
   assert equal ($day.sessions.0.prompts | select at hours) [{at: "10:00", hours: 0.3333}]
+}
+
+def "test a renamed lead session keeps its prompts" [] {
+  let dir = (mktemp --directory)
+  transcript $dir ["claude/projects/app/a.jsonl"] [
+    {type: "agent-name", agentName: "design-log", sessionId: "a"}
+    (claude-prompt "/work/app" "10:00" "start")
+    (claude-reply "/work/app" "10:20" "done")
+  ]
+
+  let day = (digest-day $dir)
+
+  assert equal ($day.sessions | each {|s| $s.prompts | select at hours }) [
+    [{at: "10:00", hours: 0.5}]
+  ]
+  assert equal $day.runs []
 }
 
 def "test a compaction belongs to the turn it compacted" [] {

@@ -1,7 +1,7 @@
 # ==================================================================================================
 # Activity Digest: Units
 # ==================================================================================================
-# Units, human credit, agent time, and continuations.
+# Units, their repository shares and agent time, human credit, and continuations.
 # ==================================================================================================
 
 use ./lib/text.nu [excerpt]
@@ -74,6 +74,36 @@ export def link []: list -> list {
   )
 
   $sessions | each {|s| $s | update turns ($units | get -o $s.transcript) }
+}
+
+# --------------------------------------------------------------------------------------------------
+# Shares
+# --------------------------------------------------------------------------------------------------
+
+# Each unit's repository shares, from the distinct files it and its delegates wrote.
+export def unit-shares [repos: record, ignored: list<string>]: record -> record {
+  $in
+  | transpose unit turns
+  | reduce --fold {} {|unit, acc|
+    let paths = ($unit.turns | get -o paths | flatten)
+    $acc | insert $unit.unit ($paths | shares $repos $ignored)
+  }
+}
+
+# --------------------------------------------------------------------------------------------------
+# Agent time
+# --------------------------------------------------------------------------------------------------
+
+# Time the turns spent, each capped and cut at its `idle` record, the last one before a long gap
+# or the next turn's start. Every turn adds, so a parallel delegate spends its own time.
+export def agent-hours [cfg: record]: list<record> -> float {
+  let spent = (
+    $in
+    | reduce --fold 0sec {|t, acc|
+      $acc + (([$t.end ($t.ts + $cfg.agentMaxMinutes * 1min) $t.idle] | compact | math min) - $t.ts)
+    }
+  )
+  ($spent / 1hr) | math round --precision 4
 }
 
 # --------------------------------------------------------------------------------------------------
@@ -152,34 +182,4 @@ export def continuations [
     }
   }
   | flatten
-}
-
-# --------------------------------------------------------------------------------------------------
-# Shares
-# --------------------------------------------------------------------------------------------------
-
-# Each unit's repository shares, from the distinct files it and its delegates wrote.
-export def unit-shares [repos: record, ignored: list<string>]: record -> record {
-  $in
-  | transpose unit turns
-  | reduce --fold {} {|unit, acc|
-    let paths = ($unit.turns | get -o paths | flatten)
-    $acc | insert $unit.unit ($paths | shares $repos $ignored)
-  }
-}
-
-# --------------------------------------------------------------------------------------------------
-# Agent time
-# --------------------------------------------------------------------------------------------------
-
-# Time the turns spent, each capped and cut at its `idle` record, the last one before a long gap
-# or the next turn's start. Every turn adds, so a parallel delegate spends its own time.
-export def agent-hours [cfg: record]: list<record> -> float {
-  let spent = (
-    $in
-    | reduce --fold 0sec {|t, acc|
-      $acc + (([$t.end ($t.ts + $cfg.agentMaxMinutes * 1min) $t.idle] | compact | math min) - $t.ts)
-    }
-  )
-  ($spent / 1hr) | math round --precision 4
 }

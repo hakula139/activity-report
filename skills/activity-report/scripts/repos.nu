@@ -57,6 +57,17 @@ def inside-checkout [path: string, checkout: string]: nothing -> bool {
   }
 }
 
+# A written path with its existing directory resolved, so a symlinked parent names the directory the
+# write lands in.
+export def physical [path: string]: nothing -> string {
+  let dir = ($path | path dirname)
+  if ($dir | path exists) {
+    $dir | path expand | path join ($path | path basename)
+  } else {
+    $path
+  }
+}
+
 # --------------------------------------------------------------------------------------------------
 # Repositories
 # --------------------------------------------------------------------------------------------------
@@ -110,17 +121,6 @@ export def repo-name [repo: any]: nothing -> any {
     null
   } else {
     $repo.root | path basename
-  }
-}
-
-# A written path with its existing directory resolved, so a symlinked parent names the directory the
-# write lands in.
-export def physical [path: string]: nothing -> string {
-  let dir = ($path | path dirname)
-  if ($dir | path exists) {
-    $dir | path expand | path join ($path | path basename)
-  } else {
-    $path
   }
 }
 

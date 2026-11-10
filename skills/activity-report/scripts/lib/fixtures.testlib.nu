@@ -144,31 +144,6 @@ export def claude-subagent [
   | save --force ($path | path join)
 }
 
-export def codex-transcript [
-  dir: string
-  meta: record
-  records: list<record>
-  --archived
-  --compressed
-]: nothing -> nothing {
-  let path = if $archived {
-    ["codex/archived_sessions" $"rollout-($DAY)T00-00-00-($meta.id).jsonl"]
-  } else {
-    ["codex/sessions" ...($DAY | split row "-") $"rollout-($DAY)T00-00-00-($meta.id).jsonl"]
-  }
-
-  transcript $dir $path ([{type: "session_meta", payload: $meta}] ++ $records)
-
-  if $compressed {
-    (
-      ^zstd ($dir | path join ...$path)
-        --quiet
-        --force
-        --rm
-    )
-  }
-}
-
 export def codex-event [clock: string, payload: record]: nothing -> record {
   {type: "event_msg", timestamp: (at $clock), payload: $payload}
 }
@@ -202,6 +177,31 @@ export def codex-turn [clock: string, text?: string, --done: string]: nothing ->
 export def codex-file-change [clock: string, changes: record]: nothing -> record {
   let item = {type: "FileChange", id: "change", status: "completed", changes: $changes}
   codex-event $clock {type: "item_completed", item: ($item | merge {stdout: "", stderr: ""})}
+}
+
+export def codex-transcript [
+  dir: string
+  meta: record
+  records: list<record>
+  --archived
+  --compressed
+]: nothing -> nothing {
+  let path = if $archived {
+    ["codex/archived_sessions" $"rollout-($DAY)T00-00-00-($meta.id).jsonl"]
+  } else {
+    ["codex/sessions" ...($DAY | split row "-") $"rollout-($DAY)T00-00-00-($meta.id).jsonl"]
+  }
+
+  transcript $dir $path ([{type: "session_meta", payload: $meta}] ++ $records)
+
+  if $compressed {
+    (
+      ^zstd ($dir | path join ...$path)
+        --quiet
+        --force
+        --rm
+    )
+  }
 }
 
 export def omp-user [clock: string, text: string, --agent]: nothing -> record {

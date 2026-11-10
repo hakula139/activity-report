@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # ==================================================================================================
-# Activity Digest: Unit Tests
+# Activity Digest: Units Tests
 # ==================================================================================================
 
 use std/assert
@@ -25,90 +25,6 @@ def "test a prompt queued while a question waits keeps its own unit" [] {
     {at: "10:03", agent: 0.0333}
     {at: "10:05", agent: 0.25}
   ]
-}
-
-def "test writes from each tool credit the repositories of their prompts" [] {
-  let dir = (mktemp --directory)
-  let app = (git-repo $dir "app")
-  let lib = (git-repo $dir "lib")
-  mkdir ($app | path join "src")
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-prompt $app "10:00" "ship the parser")
-    (claude-tool $app "10:01" "Edit" {
-      file_path: ($app | path join "src/a.nu")
-      old_string: "a"
-      new_string: "b"
-      replace_all: false
-    })
-    (claude-tool $app "10:02" "Edit" {
-      file_path: ($app | path join "src/a.nu")
-      old_string: "b"
-      new_string: "c"
-      replace_all: false
-    })
-    (claude-tool $app "10:03" "Write" {file_path: ($lib | path join "b.nu"), content: "b"})
-    (claude-tool $app "10:04" "NotebookEdit" {
-      notebook_path: ($lib | path join "n.ipynb")
-      cell_id: "cell"
-      new_source: "x"
-    })
-  ]
-  let changes = (
-    [($app | path join "c.rs") ($app | path join "e.rs") ($lib | path join "d.rs")]
-    | reduce --fold {} {|path, acc| $acc | insert $path {type: "add", content: "x"} }
-  )
-  codex-transcript $dir {id: "codex", cwd: $app, thread_source: "user"} (
-    (codex-turn "11:00" "write files") ++ [(codex-file-change "11:01" $changes)]
-  )
-  transcript $dir ["omp/sessions/app/a.jsonl"] [
-    {type: "session", id: "omp", cwd: $app}
-    (omp-user "12:00" "write files")
-    (omp-tool "12:01" [
-      {
-        type: "toolCall"
-        id: "w"
-        name: "write"
-        arguments: {path: "src/f.ts", content: "f", i: ""}
-      }
-      {
-        type: "toolCall"
-        id: "e"
-        name: "edit"
-        arguments: {path: ($lib | path join "g.ts"), old_string: "a", new_string: "b", i: ""}
-      }
-      {
-        type: "toolCall"
-        id: "p"
-        name: "edit"
-        arguments: {
-          input: (
-            "
-            [ src/h.ts#1A2B ]
-            PUT 1.=1:
-            +x
-            [src/f.ts#9C29]
-            PUT 2.=2:
-            +y
-            "
-            | str dedent
-          )
-          i: ""
-        }
-      }
-    ])
-  ]
-
-  let cases = [
-    {tool: "claude", repos: {lib: 0.67, app: 0.33}}
-    {tool: "codex", repos: {app: 0.67, lib: 0.33}}
-    {tool: "omp", repos: {app: 0.67, lib: 0.33}}
-  ]
-
-  let day = (digest-day $dir)
-
-  for c in $cases {
-    assert equal ($day.sessions | where tool == $c.tool | get 0.prompts.0.repos) $c.repos $c.tool
-  }
 }
 
 def "test Claude subagents, forks, and teammates credit the prompt whose turn started them" [] {
@@ -248,43 +164,88 @@ def "test OMP subagents and advisors credit the prompt that started them" [] {
   assert equal $day.runs []
 }
 
-def "test a prompt earns its turn and a reading allowance until the next prompt anywhere" [] {
+def "test writes from each tool credit the repositories of their prompts" [] {
   let dir = (mktemp --directory)
+  let app = (git-repo $dir "app")
+  let lib = (git-repo $dir "lib")
+  mkdir ($app | path join "src")
   transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-prompt "/work/app" "10:00" "release it, I'll watch")
-    (claude-reply "/work/app" "11:30")
-    (claude-prompt "/work/app" "12:00" "fix the test")
-    (claude-reply "/work/app" "12:06")
-    (claude-prompt "/work/app" "13:00" "refactor the parser")
-    (claude-reply "/work/app" "13:45")
-    (claude-prompt "/work/app" "14:00" "merge it")
-    (claude-reply "/work/app" "14:06")
-    (claude-notification "/work/app" "14:30")
-    (claude-reply "/work/app" "14:50")
+    (claude-prompt $app "10:00" "ship the parser")
+    (claude-tool $app "10:01" "Edit" {
+      file_path: ($app | path join "src/a.nu")
+      old_string: "a"
+      new_string: "b"
+      replace_all: false
+    })
+    (claude-tool $app "10:02" "Edit" {
+      file_path: ($app | path join "src/a.nu")
+      old_string: "b"
+      new_string: "c"
+      replace_all: false
+    })
+    (claude-tool $app "10:03" "Write" {file_path: ($lib | path join "b.nu"), content: "b"})
+    (claude-tool $app "10:04" "NotebookEdit" {
+      notebook_path: ($lib | path join "n.ipynb")
+      cell_id: "cell"
+      new_source: "x"
+    })
   ]
-  transcript $dir ["claude/projects/lib/b.jsonl"] [
-    (claude-prompt "/work/lib" "13:24" "review the API")
+  let changes = (
+    [($app | path join "c.rs") ($app | path join "e.rs") ($lib | path join "d.rs")]
+    | reduce --fold {} {|path, acc| $acc | insert $path {type: "add", content: "x"} }
+  )
+  codex-transcript $dir {id: "codex", cwd: $app, thread_source: "user"} (
+    (codex-turn "11:00" "write files") ++ [(codex-file-change "11:01" $changes)]
+  )
+  transcript $dir ["omp/sessions/app/a.jsonl"] [
+    {type: "session", id: "omp", cwd: $app}
+    (omp-user "12:00" "write files")
+    (omp-tool "12:01" [
+      {
+        type: "toolCall"
+        id: "w"
+        name: "write"
+        arguments: {path: "src/f.ts", content: "f", i: ""}
+      }
+      {
+        type: "toolCall"
+        id: "e"
+        name: "edit"
+        arguments: {path: ($lib | path join "g.ts"), old_string: "a", new_string: "b", i: ""}
+      }
+      {
+        type: "toolCall"
+        id: "p"
+        name: "edit"
+        arguments: {
+          input: (
+            "
+            [ src/h.ts#1A2B ]
+            PUT 1.=1:
+            +x
+            [src/f.ts#9C29]
+            PUT 2.=2:
+            +y
+            "
+            | str dedent
+          )
+          i: ""
+        }
+      }
+    ])
   ]
 
-  let day = (digest-day $dir {readingMinutes: 12})
-
-  assert equal ($day.sessions | each { get prompts.hours }) [[1.0 0.3 0.4 0.3] [0.2]]
-}
-
-def "test a prompt is cut by a prompt from another session after midnight" [] {
-  let dir = (mktemp --directory)
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-prompt "/work/app" "2026-10-15T23:30" "late")
-    (claude-reply "/work/app" "2026-10-16T00:20")
-  ]
-  transcript $dir ["claude/projects/lib/b.jsonl"] [
-    (claude-prompt "/work/lib" "2026-10-16T00:05" "early")
-    (claude-reply "/work/lib" "2026-10-16T00:10")
+  let cases = [
+    {tool: "claude", repos: {lib: 0.67, app: 0.33}}
+    {tool: "codex", repos: {app: 0.67, lib: 0.33}}
+    {tool: "omp", repos: {app: 0.67, lib: 0.33}}
   ]
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions | each { get prompts | get hours }) [[0.5833]]
+  for c in $cases {
+    assert equal ($day.sessions | where tool == $c.tool | get 0.prompts.0.repos) $c.repos $c.tool
+  }
 }
 
 def "test separate prompts and parallel delegates both add agent time" [] {
@@ -330,4 +291,43 @@ def "test an agent turn earns at most the cap" [] {
   let day = (digest-day $dir {agentMaxMinutes: 90})
 
   assert equal $day.runs.0.agent 1.5
+}
+
+def "test a prompt earns its turn and a reading allowance until the next prompt anywhere" [] {
+  let dir = (mktemp --directory)
+  transcript $dir ["claude/projects/app/a.jsonl"] [
+    (claude-prompt "/work/app" "10:00" "release it, I'll watch")
+    (claude-reply "/work/app" "11:30")
+    (claude-prompt "/work/app" "12:00" "fix the test")
+    (claude-reply "/work/app" "12:06")
+    (claude-prompt "/work/app" "13:00" "refactor the parser")
+    (claude-reply "/work/app" "13:45")
+    (claude-prompt "/work/app" "14:00" "merge it")
+    (claude-reply "/work/app" "14:06")
+    (claude-notification "/work/app" "14:30")
+    (claude-reply "/work/app" "14:50")
+  ]
+  transcript $dir ["claude/projects/lib/b.jsonl"] [
+    (claude-prompt "/work/lib" "13:24" "review the API")
+  ]
+
+  let day = (digest-day $dir {readingMinutes: 12})
+
+  assert equal ($day.sessions | each { get prompts.hours }) [[1.0 0.3 0.4 0.3] [0.2]]
+}
+
+def "test a prompt is cut by a prompt from another session after midnight" [] {
+  let dir = (mktemp --directory)
+  transcript $dir ["claude/projects/app/a.jsonl"] [
+    (claude-prompt "/work/app" "2026-10-15T23:30" "late")
+    (claude-reply "/work/app" "2026-10-16T00:20")
+  ]
+  transcript $dir ["claude/projects/lib/b.jsonl"] [
+    (claude-prompt "/work/lib" "2026-10-16T00:05" "early")
+    (claude-reply "/work/lib" "2026-10-16T00:10")
+  ]
+
+  let day = (digest-day $dir)
+
+  assert equal ($day.sessions | each { get prompts | get hours }) [[0.5833]]
 }
