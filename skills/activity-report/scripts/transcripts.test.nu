@@ -11,7 +11,6 @@ use ./lib/fixtures.testlib.nu *
 def "test NUL-only transcript records warn and preserve the remaining activity" [] {
   for tool in ["claude" "codex"] {
     let dir = (mktemp --directory)
-
     let file = if $tool == "claude" {
       let path = ["claude/projects/app/a.jsonl"]
       transcript $dir $path [
@@ -20,7 +19,6 @@ def "test NUL-only transcript records warn and preserve the remaining activity" 
         (claude-prompt "/work/app" "11:00" "second task")
         (claude-reply "/work/app" "11:30" "second result")
       ]
-
       $dir | path join ...$path
     } else {
       codex-transcript $dir {id: "a", cwd: "/work/app", thread_source: "user"} [
@@ -28,9 +26,9 @@ def "test NUL-only transcript records warn and preserve the remaining activity" 
         ...(codex-turn "11:00" "second task" --done "11:30")
       ]
       let path = ["codex/sessions" ...($DAY | split row "-") $"rollout-($DAY)T00-00-00-a.jsonl"]
-
       $dir | path join ...$path
     }
+
     let expected = (digest-output $dir)
 
     let lines = (open --raw $file | lines)

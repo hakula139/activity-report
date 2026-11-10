@@ -78,7 +78,6 @@ export def claude-queued [
   kind: string = "human"
 ]: nothing -> record {
   let attachment = {type: "queued_command", origin: {kind: $kind}, prompt: $text}
-
   {type: "attachment", cwd: $cwd, timestamp: (at $clock), attachment: $attachment}
 }
 
@@ -91,7 +90,6 @@ export def claude-answered [cwd: string, clock: string, answers: record]: nothin
   let content = [{type: "tool_result", content: "The user answered.", tool_use_id: "tool"}]
   let result = {questions: [], answers: $answers, annotations: {}}
   let message = {role: "user", content: $content}
-
   {type: "user", cwd: $cwd, timestamp: (at $clock), isSidechain: false, message: $message}
   | insert toolUseResult $result
 }
@@ -101,14 +99,12 @@ export def claude-timed-out [cwd: string, clock: string]: nothing -> record {
   let content = [{type: "tool_result", content: "No response after 300s.", tool_use_id: "tool"}]
   let result = {questions: [], answers: {}, afkTimeoutMs: 300000, annotations: {}}
   let message = {role: "user", content: $content}
-
   {type: "user", cwd: $cwd, timestamp: (at $clock), isSidechain: false, message: $message}
   | insert toolUseResult $result
 }
 
 export def claude-reply [cwd: string, clock: string, text: string = "done"]: nothing -> record {
   let message = {stop_reason: "end_turn", content: [{type: "text", text: $text}]}
-
   {type: "assistant", cwd: $cwd, timestamp: (at $clock), message: $message}
 }
 
@@ -117,7 +113,6 @@ export def claude-active [cwd: string, clocks: list<string>]: nothing -> list<re
   $clocks
   | each {|clock|
     let message = {stop_reason: null, content: [{type: "thinking", thinking: ""}]}
-
     {type: "assistant", cwd: $cwd, timestamp: (at $clock), message: $message}
   }
 }
@@ -130,7 +125,6 @@ export def claude-tool [
 ]: nothing -> record {
   let content = [{type: "tool_use", id: "tool", name: $name, input: $input}]
   let message = {role: "assistant", stop_reason: "tool_use", content: $content}
-
   {type: "assistant", cwd: $cwd, timestamp: (at $clock), message: $message}
 }
 
@@ -145,7 +139,6 @@ export def claude-subagent [
   transcript $dir ["claude/projects" $project $lead "subagents" $"agent-($id).jsonl"] $records
 
   let path = [$dir "claude/projects" $project $lead "subagents" $"agent-($id).meta.json"]
-
   $meta
   | to json
   | save --force ($path | path join)
@@ -182,7 +175,6 @@ export def codex-event [clock: string, payload: record]: nothing -> record {
 
 export def codex-model [clock: string]: nothing -> record {
   let payload = {type: "message", role: "assistant", content: [{type: "output_text", text: ""}]}
-
   {type: "response_item", timestamp: (at $clock), payload: $payload}
 }
 
@@ -191,7 +183,6 @@ export def codex-turn [clock: string, text?: string, --done: string]: nothing ->
   let id = $"turn-($clock)"
   let item = {type: "UserMessage", content: [{type: "text", text: $text}]}
   let prompt_at = ((at $clock | into datetime) + 1sec | format date "%Y-%m-%dT%H:%M:%S%.3fZ")
-
   [
     (codex-event $clock {type: "task_started", turn_id: $id})
     (
@@ -210,26 +201,22 @@ export def codex-turn [clock: string, text?: string, --done: string]: nothing ->
 
 export def codex-file-change [clock: string, changes: record]: nothing -> record {
   let item = {type: "FileChange", id: "change", status: "completed", changes: $changes}
-
   codex-event $clock {type: "item_completed", item: ($item | merge {stdout: "", stderr: ""})}
 }
 
 export def omp-user [clock: string, text: string, --agent]: nothing -> record {
   let attribution = if $agent { "agent" } else { "user" }
   let message = {role: "user", attribution: $attribution, content: $text}
-
   {type: "message", timestamp: (at $clock), message: $message}
 }
 
 export def omp-reply [clock: string, text: string = "done"]: nothing -> record {
   let message = {role: "assistant", stopReason: "stop", content: $text}
-
   {type: "message", timestamp: (at $clock), message: $message}
 }
 
 export def omp-tool [clock: string, calls: list]: nothing -> record {
   let message = {role: "assistant", stopReason: "toolUse", content: $calls}
-
   {type: "message", timestamp: (at $clock), message: $message}
 }
 
@@ -264,11 +251,9 @@ export def digest-run [
     ([--config $config_file ($from | default $DAY) $to] | compact)
     ++ [$"--excerpt-chars=($excerpt_chars)"]
   )
-
   with-env {TZ: $tz} {
     (
-      ^$nu.current-exe --no-config-file
-        $SCRIPT ...$args
+      ^$nu.current-exe --no-config-file $SCRIPT ...$args
       | complete
     )
   }
@@ -285,7 +270,6 @@ export def digest-output [
   let run = (
     digest-run $dir $overrides --excerpt-chars=$excerpt_chars --from=$from --to=$to --tz=$tz
   )
-
   assert equal $run.exit_code 0 $run.stderr
 
   $run.stdout | from json

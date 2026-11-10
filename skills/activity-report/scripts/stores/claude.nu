@@ -16,7 +16,6 @@ def claude-parent [cfg: record, records: list, file: string]: nothing -> any {
     let meta_file = ($file | str replace --regex '\.jsonl$' ".meta.json")
     let meta = (open --raw $meta_file | from json)
     let parent_agent = ($meta | get -o parentAgentId)
-
     if $parent_agent != null {
       $dir | path join $"agent-($parent_agent).jsonl"
     } else {
@@ -29,7 +28,6 @@ def claude-parent [cfg: record, records: list, file: string]: nothing -> any {
       null
     } else {
       let id = ($team | str replace "session-" "")
-
       glob $"($cfg.assistantDirs.claude)/projects/*/($id)*.jsonl" | get -o 0
     }
   }
@@ -57,7 +55,6 @@ def claude-question [r: record]: nothing -> any {
       | items {|question, answer| $"($question): ($answer)" }
       | str join "\n"
     )
-
     {kind: "prompt", ts: $r.timestamp, text: $text}
   }
 }
@@ -96,7 +93,6 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
       return null
     }
 
-    let entrypoint = ($records | get -o entrypoint | compact | get -o 0 | default "")
     let events = (
       $records
       | each {|r|
@@ -104,7 +100,6 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
           null
         } else if $r.type == "user" and $r.toolUseResult? == null {
           let kind = if (claude-human $r) { "prompt" } else { "trigger" }
-
           {kind: $kind, ts: $r.timestamp, text: ($r.message.content | content-text)}
         } else if (
           $r.type == "attachment"
@@ -116,7 +111,6 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
           claude-question $r
         } else if $r.type == "assistant" {
           let paths = (claude-writes $r)
-
           if ($paths | is-not-empty) {
             {kind: "write", ts: $r.timestamp, paths: $paths}
           } else if (claude-reply $r) {
@@ -135,9 +129,9 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
     )
 
     let id = ($file | path parse | get stem)
+    let entrypoint = ($records | get -o entrypoint | compact | get -o 0 | default "")
     let headless = ($entrypoint | str starts-with "sdk")
     let attended = ((not $headless) and ($records.0.isSidechain? != true))
-
     {
       id: $id
       cwd: $cwd

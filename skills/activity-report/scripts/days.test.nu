@@ -66,24 +66,24 @@ def "test a local command before more conversation leaves no continuation" [] {
     {command: "/export", prompt: "10:05", reply: "10:30", agent: 0.4167}
     {command: "/model", prompt: "11:00", reply: "11:30", agent: 0.5}
   ]
-  for case in $cases {
+  for c in $cases {
     let dir = (mktemp --directory)
     let app = (git-repo $dir "app")
     let lead = "aaaabbbb-0000-4000-8000-00000000000c"
     transcript $dir ["claude/projects/app" $"($lead).jsonl"] [
       (claude-prompt $app "22:00" "P")
       (claude-reply $app "22:20" "first")
-      (claude-user $app "2026-10-16T10:00" $"<command-name>($case.command)</command-name>")
+      (claude-user $app "2026-10-16T10:00" $"<command-name>($c.command)</command-name>")
       (claude-user $app "2026-10-16T10:00" "<local-command-stdout>done</local-command-stdout>")
-      (claude-prompt $app $"2026-10-16T($case.prompt)" "Q")
-      (claude-reply $app $"2026-10-16T($case.reply)" "second")
+      (claude-prompt $app $"2026-10-16T($c.prompt)" "Q")
+      (claude-reply $app $"2026-10-16T($c.reply)" "second")
     ]
 
     let output = (digest-output $dir --to "2026-10-16")
 
-    assert equal $output.days.1.sessions.0.continued [] $"($case.command) leaves no continuation"
-    assert equal $output.days.1.sessions.0.prompts.0.agent $case.agent $"Q at ($case.prompt)"
-    assert equal $output.days.1.runs [] $"($case.command) leaves no run"
+    assert equal $output.days.1.sessions.0.continued [] $"($c.command) leaves no continuation"
+    assert equal $output.days.1.sessions.0.prompts.0.agent $c.agent $"Q at ($c.prompt)"
+    assert equal $output.days.1.runs [] $"($c.command) leaves no run"
   }
 }
 

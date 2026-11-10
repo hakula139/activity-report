@@ -76,6 +76,7 @@ def main [
       )
     }
   )
+
   let names = (
     (
       ($days | each {|day| $day.sessions | each {|s| $s.repo } })

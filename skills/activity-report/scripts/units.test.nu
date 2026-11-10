@@ -32,7 +32,6 @@ def "test writes from each tool credit the repositories of their prompts" [] {
   let app = (git-repo $dir "app")
   let lib = (git-repo $dir "lib")
   mkdir ($app | path join "src")
-
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt $app "10:00" "ship the parser")
     (claude-tool $app "10:01" "Edit" {

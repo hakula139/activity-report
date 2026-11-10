@@ -14,8 +14,7 @@ use ./repos.nu [shares]
 # The depth of a session's parent chain, zero when no loaded session delegated to it.
 def depth [parents: record, transcript: string, seen: list = []]: nothing -> int {
   let parent = ($parents | get -o $transcript)
-
-  if $parent == null or ($seen | any {|path| $path == $transcript }) {
+  if $parent == null or $transcript in $seen {
     0
   } else {
     1 + (depth $parents $parent ($seen | append $transcript))
@@ -106,7 +105,6 @@ export def credit-prompts [cfg: record, units: record]: list -> list<record> {
       | where ts >= $day and ts < ($day + 1day)
       | agent-hours $cfg
     )
-
     $p.item
     | insert hours ($hours | math round --precision 4)
     | insert agent $agent
@@ -143,7 +141,6 @@ export def continuations [
         | flatten
         | shares $repos $ignored
       )
-
       {
         transcript: $p.transcript
         ts: ($turns.0.ts | format date "%Y-%m-%d" | into datetime)
@@ -167,7 +164,6 @@ export def unit-shares [repos: record, ignored: list<string>]: record -> record 
   | transpose unit turns
   | reduce --fold {} {|unit, acc|
     let paths = ($unit.turns | get -o paths | flatten)
-
     $acc | insert $unit.unit ($paths | shares $repos $ignored)
   }
 }
@@ -185,6 +181,5 @@ export def agent-hours [cfg: record]: list<record> -> float {
       $acc + (([$t.end ($t.ts + $cfg.agentMaxMinutes * 1min) $t.idle] | compact | math min) - $t.ts)
     }
   )
-
   ($spent / 1hr) | math round --precision 4
 }
