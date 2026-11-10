@@ -11,7 +11,7 @@
 # The main checkout of a deleted sibling worktree, `<root>/<name>` for `<root>/<name>__worktrees`,
 # or null outside that layout.
 def worktrees-main [dir: string]: nothing -> any {
-  $dir | parse --regex '^(?<main>.+)__worktrees/' | get -o 0.main
+  $dir | parse --regex "^(?<main>.+)__worktrees/" | get -o 0.main
 }
 
 # The nearest existing ancestor of a directory without resolving a sibling worktree, so a deleted

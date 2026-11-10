@@ -8,7 +8,7 @@ use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
 
 # An OMP call writes one path, and its patch form names a path per `[<path>#<hash>]` header.
-def omp-paths [cwd: string, call: record]: nothing -> list<string> {
+def call-paths [cwd: string, call: record]: nothing -> list<string> {
   let args = ($call.arguments | default {})
   let paths = (
     [($args.path?)]
@@ -49,7 +49,7 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
             let paths = (
               $m.content
               | where {|part| $part.type? == "toolCall" and $part.name in ["write" "edit"] }
-              | each {|part| omp-paths $cwd $part }
+              | each {|part| call-paths $cwd $part }
               | flatten
             )
             if ($paths | is-not-empty) {

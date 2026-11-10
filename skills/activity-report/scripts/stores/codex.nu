@@ -22,7 +22,7 @@ def strip-request-prefix []: string -> string {
 
 # The transcript of the thread that delegated to a Codex session, or null. Subagents and guardian
 # reviews both carry `parent_thread_id` at the top level of the session metadata.
-def codex-parent [cfg: record, meta: record]: nothing -> any {
+def parent [cfg: record, meta: record]: nothing -> any {
   let id = ($meta | get -o parent_thread_id)
 
   if $id == null {
@@ -102,7 +102,7 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
       id: $meta.id
       cwd: $meta.cwd
       attended: $attended
-      parent: (codex-parent $cfg $meta)
+      parent: (parent $cfg $meta)
       events: $events
     }
   }

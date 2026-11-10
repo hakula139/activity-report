@@ -7,12 +7,12 @@
 use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
 
-def claude-human [r: record]: nothing -> bool {
+def human [r: record]: nothing -> bool {
   $r.origin?.kind? == "human"
 }
 
 # A question's answers become a prompt, one `question: answer` line per entry.
-def claude-question [r: record]: nothing -> any {
+def question [r: record]: nothing -> any {
   let result = $r.toolUseResult?
 
   if not ($result | describe | str starts-with "record") {
@@ -34,7 +34,7 @@ def claude-question [r: record]: nothing -> any {
 }
 
 # Absolute paths a Claude record wrote: Edit and Write name a file, NotebookEdit a notebook.
-def claude-writes [r: record]: nothing -> list<string> {
+def writes [r: record]: nothing -> list<string> {
   let part = ($r.message.content | get -o 0)
 
   if (
@@ -53,13 +53,13 @@ def claude-writes [r: record]: nothing -> list<string> {
 }
 
 # Subagents end their run with a SubagentHandback call in place of a final text reply.
-def claude-reply [r: record]: nothing -> bool {
+def reply [r: record]: nothing -> bool {
   $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
 }
 
 # The transcript of the session that delegated to a Claude session, or null. A subagent names its
 # parent agent, and otherwise its lead. A teammate names its lead's session id.
-def claude-parent [cfg: record, records: list, file: string]: nothing -> any {
+def parent [cfg: record, records: list, file: string]: nothing -> any {
   let dir = ($file | path dirname)
 
   if ($dir | path basename) == "subagents" {
@@ -99,21 +99,21 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
         let event = if $r.isCompactSummary? == true {
           null
         } else if $r.type == "user" and $r.toolUseResult? == null {
-          let kind = if (claude-human $r) { "prompt" } else { "trigger" }
+          let kind = if (human $r) { "prompt" } else { "trigger" }
           {kind: $kind, ts: $r.timestamp, text: ($r.message.content | content-text)}
         } else if (
           $r.type == "attachment"
           and $r.attachment.type? == "queued_command"
-          and (claude-human $r.attachment)
+          and (human $r.attachment)
         ) {
           {kind: "prompt", ts: $r.timestamp, text: ($r.attachment.prompt | content-text)}
         } else if $r.type == "user" {
-          claude-question $r
+          question $r
         } else if $r.type == "assistant" {
-          let paths = (claude-writes $r)
+          let paths = (writes $r)
           if ($paths | is-not-empty) {
             {kind: "write", ts: $r.timestamp, paths: $paths}
-          } else if (claude-reply $r) {
+          } else if (reply $r) {
             {kind: "reply", ts: $r.timestamp, text: ($r.message.content | content-text)}
           }
         }
@@ -136,7 +136,7 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
       id: $id
       cwd: $cwd
       attended: $attended
-      parent: (claude-parent $cfg $records $file)
+      parent: (parent $cfg $records $file)
       events: $events
     }
   }

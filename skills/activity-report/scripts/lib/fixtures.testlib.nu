@@ -231,7 +231,7 @@ export def digest-run [
   let config_file = ($dir | path join "config.json")
 
   {
-    excludedDirs: ['/[^/]+__worktrees/workmux-']
+    excludedDirs: ["/[^/]+__worktrees/workmux-"]
     labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
     readingMinutes: 10
     maxMinutes: 60
