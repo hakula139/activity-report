@@ -1,11 +1,11 @@
 # Design
 
-`activity-digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates. It:
+`activity-digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates:
 
-- reads assistant state
-- projects each session into turns
-- links those turns into units owned by a prompt
-- measures the human and agent time each unit earned
+1. reads assistant state
+2. projects each session into turns
+3. links those turns into units owned by a prompt
+4. measures the human and agent time each unit earned
 
 This page records the invariants behind that projection.
 
@@ -40,8 +40,9 @@ A turn starts at a prompt or trigger, ends at its first reply or its last model 
 - headless runs (`codex exec`, MCP, SDK entrypoints)
 - sidechains
 - Codex sessions whose `thread_source` is not `user`
+- sessions whose `cwd` matches an entry in `excludedDirs`
 
-It is also false when `cwd` matches an entry in `excludedDirs`. Only an attended session's prompts earn human hours.
+Only an attended session's prompts earn human hours.
 
 ## Units
 
@@ -77,9 +78,7 @@ A day covers `[00:00, next 00:00)` in local time and lists:
 The top level:
 
 - repeats `labels`
-- maps each repository name in the output to its root in `repositories`
+- maps each repository name in the output to its root in `repositories`, keeping the first root found when two repositories share a directory name
 - holds one entry per date in `days`
-
-A repeated directory name keeps the first root found.
 
 The field reference lives in `skills/activity-report/references/output.md`, so it changes with the output.

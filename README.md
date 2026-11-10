@@ -80,15 +80,13 @@ The command takes a JSON config file through `--config`:
 | `agentIdleMinutes` | Longest gap in minutes between a turn's records before the rest of the turn earns no time        |
 | `assistantDirs`    | Absolute state directories for `claude`, `codex`, and `omp`                                      |
 
-By default, each assistant reads its state from the following directory:
+Set `assistantDirs` to each assistant's state directory, as an absolute path:
 
 | Assistant   | State directory                       |
 | ----------- | ------------------------------------- |
 | Claude Code | `CLAUDE_CONFIG_DIR`, else `~/.claude` |
 | Codex       | `CODEX_HOME`, else `~/.codex`         |
 | OMP         | `~/.omp/agent`                        |
-
-Use the absolute paths that apply to the account that ran the sessions.
 
 ## Usage
 
@@ -132,9 +130,9 @@ Releases follow the [versioning policy](RELEASING.md#versioning), and stable rel
 
 The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that:
 
-- reads the digest
-- gathers repository, forge, calendar, and screen-history evidence
-- writes the report
+1. reads the digest
+2. gathers repository, forge, calendar, and screen-history evidence
+3. writes the report
 
 The skill assumes the command discovers its configuration, which arrives in a later release.
 

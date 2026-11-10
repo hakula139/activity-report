@@ -4,11 +4,18 @@ The command and its tests are Nushell. General Nushell conventions and traps liv
 
 ## Scripts
 
-- **Entry point**: `skills/activity-report/scripts/activity-digest.nu` holds `def main`, checks its arguments, and orders the pipeline.
-- **Modules**: `transcripts.nu` reads transcripts and projects turns, `repos.nu` resolves repositories and shares, `units.nu` computes credit and agent time, `days.nu` shapes a day, `lib/text.nu` holds message text and excerpts, and `stores/{claude,codex,omp}.nu` map one assistant's records to events.
-- **Dependencies**: `stores/*` import `transcripts` and `lib/text`, `transcripts` imports `repos`, `units` imports `repos` and `lib/text`, and `days` imports `units`, `repos`, and `lib/text`. The entry imports the stores, `repos`, `units`, and `days`.
+- **Entry point**: `skills/activity-report/scripts/activity-digest.nu` holds `def main`, checks its arguments, orders the pipeline, and imports the stores, `repos`, `units`, and `days`.
 - **Config**: the tests build the config as a record and save it as JSON.
 - **External tools**: the command calls `git` at a directory and `zstd` on a compressed transcript.
+
+| Module                         | Holds                                 | Imports                      |
+| ------------------------------ | ------------------------------------- | ---------------------------- |
+| `transcripts.nu`               | Reads transcripts and projects turns  | `repos`, `lib/text`          |
+| `repos.nu`                     | Resolves repositories and shares      |                              |
+| `units.nu`                     | Computes credit and agent time        | `repos`, `lib/text`          |
+| `days.nu`                      | Shapes a day                          | `units`, `repos`, `lib/text` |
+| `lib/text.nu`                  | Holds message text and excerpts       |                              |
+| `stores/{claude,codex,omp}.nu` | Map one assistant's records to events | `transcripts`, `lib/text`    |
 
 ## Testing
 
