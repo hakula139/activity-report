@@ -36,17 +36,21 @@
     let
       inherit (nixpkgs) lib;
 
+      runtimeInputs =
+        pkgs: with pkgs; [
+          git
+          zstd
+        ];
+
       mkActivityReport =
         pkgs:
         (devkit.lib.mkLib pkgs).mkNuApplication {
-          pname = "activity-digest";
+          pname = "activity-report";
+          entry = "activity-digest";
           version = "0.0.0";
           src = ./src;
           skills = [ ./skills/activity-report ];
-          runtimeInputs = with pkgs; [
-            git
-            zstd
-          ];
+          runtimeInputs = runtimeInputs pkgs;
           meta = {
             description = "Report what you worked on from agent transcripts, with hours per project and task";
             homepage = "https://github.com/hakula139/activity-report";
@@ -66,6 +70,8 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         dk = devkit.lib.mkLib pkgs;
+
+        commonInputs = runtimeInputs pkgs;
 
         activityReport = mkActivityReport pkgs;
 
@@ -99,9 +105,8 @@
           packages = [
             dk.nushell
             dk.nu-test
-            pkgs.git
-            pkgs.zstd
-          ];
+          ]
+          ++ commonInputs;
 
           inputsFrom = [ preCommit ];
         };
@@ -122,10 +127,7 @@
 
           tests = dk.nuTests {
             src = ./.;
-            runtimeInputs = [
-              pkgs.git
-              pkgs.zstd
-            ];
+            runtimeInputs = commonInputs;
           };
         };
 

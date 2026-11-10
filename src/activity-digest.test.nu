@@ -248,7 +248,7 @@ def digest-run [
       '/\.claude/worktrees/workmux/'
       '/[^/]+__worktrees/workmux-'
     ]
-    labels: {default: ["work"], projects: {nixos-config: ["personal"]}}
+    labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
     readingMinutes: 10
     maxMinutes: 60
     agentMaxMinutes: 120
@@ -1581,7 +1581,7 @@ def "test a day keeps its final replies past midnight until the next prompt" [] 
 def "test sessions report their repository, and the digest lists labels and repository paths" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
-  let cfg = (git-repo $dir "nixos-config")
+  let cfg = (git-repo $dir "dotfiles")
   mkdir ($app | path join "src")
   mkdir ($dir | path join "scratch")
   transcript $dir ["claude/projects/app/a.jsonl"] [
@@ -1600,12 +1600,12 @@ def "test sessions report their repository, and the digest lists labels and repo
   let day = $output.days.0
 
   assert equal ($output | reject days) {
-    labels: {default: ["work"], projects: {nixos-config: ["personal"]}}
-    repositories: {app: $app, nixos-config: $cfg}
+    labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
+    repositories: {app: $app, dotfiles: $cfg}
   }
   assert equal ($day.sessions | select repo cwd) [
     {repo: "app", cwd: $app}
-    {repo: "nixos-config", cwd: $cfg}
+    {repo: "dotfiles", cwd: $cfg}
     {repo: null, cwd: ($dir | path join "scratch")}
   ]
   assert equal ($day.sessions.0 | columns) [

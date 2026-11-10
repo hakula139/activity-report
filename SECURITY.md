@@ -22,7 +22,7 @@ The maintainer acknowledges a report within 7 days and shares an assessment with
 - **Standard output** holds the requested excerpt of each prompt and reply. Treat a digest and a report as private, and redact paths, tokens, and conversation text before sharing either.
 - **The command writes no state.** It reads assistant stores and the config file, and prints JSON.
 
-A bug can expose more text than the configured excerpt or report activity from a directory the user expected to stay out of the range. The command holds no credentials, opens no network connections, and runs no commands from the assistant stores.
+A bug can expose more text than the configured excerpt. `excludedDirs` removes human hours from matching sessions, while their agent work still appears as runs. The command holds no credentials, opens no network connections, and runs no commands from the assistant stores.
 
 ## Trust model
 

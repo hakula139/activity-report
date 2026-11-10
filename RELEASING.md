@@ -11,7 +11,7 @@ Use the [release skill](https://github.com/hakula139/plugins/blob/main/plugins/h
 
 Within a minor version, stable releases keep these compatible:
 
-- Subcommands, flags, and exit codes
+- Flags, positional dates, and exit codes
 - The flake's `packages` and `overlays.default` outputs
 - The digest's JSON output, covering the `days`, `labels`, and `repositories` keys and the fields under them
 - The skill's report layout, covering the Projects table, the Days lines, the 0.5-hour rounding, and the labels selection
@@ -22,4 +22,4 @@ Transcript formats follow each assistant's own releases, so an assistant release
 
 Set `version` in `flake.nix` to the release number, update the changelog, and run the [verification block](AGENTS.md#verification). Mark changes to the stability surface with `!` in the conventional commit title.
 
-After publication, verify that `nix run github:hakula139/activity-report/vX.Y.Z -- --config ./config.json <date>` starts and prints its JSON.
+After publication, verify that `nix run github:hakula139/activity-report/vX.Y.Z -- --help` starts and prints the command's help.

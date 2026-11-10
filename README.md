@@ -83,21 +83,9 @@ The top-level JSON has three keys:
 
 - `labels` repeats the label configuration.
 - `repositories` maps each repository named in the output to its root.
-- `days` holds one entry per date, each with `sessions` and `runs`.
+- `days` holds one entry per date, each with `date`, `weekday`, `sessions`, and `runs`.
 
 A session has `tool`, `session`, `cwd`, `repo`, `prompts`, `replies`, and `continued`. A prompt has `at`, `hours`, `agent`, `repos`, and `text`. A run describes agent work that no prompt started, such as a headless run or a worker. `activity-digest --help` documents every field and how hours are earned.
-
-## Agent skill
-
-The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. Point the assistant at the directory:
-
-| Assistant   | Skill directory                       |
-| ----------- | ------------------------------------- |
-| Claude Code | `~/.claude/skills/activity-report`    |
-| Codex       | `~/.codex/skills/activity-report`     |
-| OMP         | `~/.omp/agent/skills/activity-report` |
-
-Link or copy the whole directory, never `SKILL.md` alone, because Codex skips a `SKILL.md` that is itself a symlink. Start a new assistant session after linking.
 
 ## Tested with
 
@@ -110,6 +98,16 @@ The transcript formats change without notice. The digest is tested on Linux agai
 | OMP         | 18.18.1 |
 
 A newer assistant can add a record kind this command ignores, so that activity then goes uncounted. If a report misses work you know happened, open an issue with the release tag or commit you run and the assistant's version.
+
+## Releases
+
+Releases follow the [versioning policy](RELEASING.md#versioning), and stable releases keep the [stability surface](RELEASING.md#stability-surface) compatible within a minor version.
+
+## Agent skill
+
+The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. The skill assumes the command discovers its configuration, which arrives in a later release.
+
+Link or copy the whole directory, never `SKILL.md` alone, because Codex skips a `SKILL.md` that is itself a symlink. Start a new assistant session after linking.
 
 ## Development
 

@@ -19,7 +19,7 @@ A transcript is JSON lines, optionally compressed. When parsing fails, the reade
 Each transcript becomes a session with `id`, `cwd`, `attended`, `parent`, and `events`. The tool's reader maps its own record kinds to events:
 
 - **prompt**: a person's message, including an answer to a question and a queued command.
-- **trigger**: a turn started by the tool rather than by the person.
+- **trigger**: a turn the tool started.
 - **reply**: the model's answer for a turn.
 - **abort**: a canceled turn, which cannot borrow a later reply.
 - **write**: the files a record wrote.
@@ -28,7 +28,7 @@ Each transcript becomes a session with `id`, `cwd`, `attended`, `parent`, and `e
 
 A turn starts at a prompt or trigger, ends at its first reply or its last model output, and collects the writes that follow its start. Every turn adds its own time, so a parallel delegate spends its own time.
 
-`attended` is false for headless runs (`codex exec`, MCP, SDK entrypoints) and sidechains, and false when `cwd` matches an entry in `excludedDirs`. Only an attended session's prompts earn human hours.
+`attended` is false for headless runs (`codex exec`, MCP, SDK entrypoints), sidechains, and Codex sessions whose `thread_source` is not `user`, and false when `cwd` matches an entry in `excludedDirs`. Only an attended session's prompts earn human hours.
 
 ## Units
 
