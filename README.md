@@ -79,7 +79,7 @@ Dates are local `YYYY-MM-DD` dates. Omitting the second date reports that day al
 
 ## Output
 
-The command prints one JSON document, with the label configuration, the root of each repository it names, and one entry per local date holding that day's sessions and runs. [Output fields](skills/activity-report/references/output.md) documents each field, its unit, and how hours are earned.
+The command prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned.
 
 ## Tested with
 
