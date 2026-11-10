@@ -1,0 +1,77 @@
+name: Bug report
+description: Report a crash, an error, or behavior that differs from the docs
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [existing issues](https://github.com/hakula139/activity-report/issues?q=is%3Aissue) first, and add a reaction to a matching one when you find it.
+
+        Transcripts and reports can hold private data. Redact paths, tokens, and conversation text from everything you paste below.
+
+  - type: input
+    id: version
+    attributes:
+      label: activity-report version
+      description: The release tag or the commit you run.
+      placeholder: vX.Y.Z
+    validations:
+      required: true
+
+  - type: textarea
+    id: assistants
+    attributes:
+      label: Assistant versions
+      description: Versions of the assistants whose state the command read, such as `claude --version` and `codex --version`.
+      placeholder: |
+        Claude Code 2.1.319
+        Codex 0.167.0
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: OS and Nushell
+      description: Operating system, architecture, and `nu --version`.
+      placeholder: macOS arm64, Nushell 0.116.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: The config file, with assistant paths and project names redacted.
+      render: json
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The exact command, including flags and dates.
+      placeholder: activity-digest --config ./config.json 2026-10-12 2026-10-16
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output or error
+      description: The JSON or the error text, with private content redacted. Text is easier to search than a screenshot.
+      render: text
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the session or day the output misses or miscounts.
+    validations:
+      required: true
