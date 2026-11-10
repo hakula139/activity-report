@@ -56,4 +56,4 @@ A day covers `[00:00, next 00:00)` in local time and lists:
 
 The top level repeats `labels`, maps each repository name in the output to its root in `repositories`, and holds one entry per date in `days`. A repeated directory name keeps the first root found.
 
-`main`'s docstring is the field reference a user sees in `--help`, so it changes with the output.
+The field reference lives in `skills/activity-report/references/output.md`, so it changes with the output.

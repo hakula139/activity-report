@@ -79,13 +79,7 @@ Dates are local `YYYY-MM-DD` dates. Omitting the second date reports that day al
 
 ## Output
 
-The top-level JSON has three keys:
-
-- `labels` repeats the label configuration.
-- `repositories` maps each repository named in the output to its root.
-- `days` holds one entry per date, each with `date`, `weekday`, `sessions`, and `runs`.
-
-A session has `tool`, `session`, `cwd`, `repo`, `prompts`, `replies`, and `continued`. A prompt has `at`, `hours`, `agent`, `repos`, and `text`. A run describes agent work that no prompt started, such as a headless run or a worker. `activity-digest --help` documents every field and how hours are earned.
+The command prints one JSON document, with the label configuration, the root of each repository it names, and one entry per local date holding that day's sessions and runs. [Output fields](skills/activity-report/references/output.md) documents each field, its unit, and how hours are earned.
 
 ## Tested with
 
