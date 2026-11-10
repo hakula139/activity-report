@@ -28,4 +28,4 @@ A bug can expose more text than the configured excerpt. `excludedDirs` removes h
 
 The command runs with the permissions of the user who starts it and reads that user's assistant stores. It trusts the store formats of the assistants it supports, listed in the [README](README.md#tested-with).
 
-The [agent skill](skills/activity-report/SKILL.md) asks the assistant to run `git`, `gh`, `glab`, `vdirsyncer`, and `khal`. Those commands read the same machine and reach the forge the user is signed in to, so install the skill only where that access is intended.
+The [agent skill](SKILL.md) asks the assistant to run `git`, `gh`, `glab`, `vdirsyncer`, and `khal`. Those commands read the same machine and reach the forge the user is signed in to, so install the skill only where that access is intended.

@@ -105,7 +105,7 @@ Releases follow the [versioning policy](RELEASING.md#versioning), and stable rel
 
 ## Agent skill
 
-The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. The skill assumes the command discovers its configuration, which arrives in a later release.
+The repository root is the [Agent Skill](SKILL.md). It reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. The skill assumes the command discovers its configuration, which arrives in a later release.
 
 Link or copy the whole directory, never `SKILL.md` alone, because Codex skips a `SKILL.md` that is itself a symlink. Start a new assistant session after linking.
 
