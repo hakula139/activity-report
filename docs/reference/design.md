@@ -12,7 +12,7 @@ A run reads a JSON config with three inputs beyond the time limits: `assistantDi
 | Codex       | `sessions/*/*/*/*.jsonl[.zst]` and `archived_sessions/*`  |
 | OMP         | `sessions/**/*.jsonl`                                     |
 
-A transcript is JSON lines, optionally compressed. When parsing fails, the reader retries without the transcript's first line, and a record that is only NUL bytes is skipped.
+A transcript is JSON lines, optionally compressed. When parsing fails, the reader retries without the transcript's last line, which a running session may have left partial, and a record that is only NUL bytes is skipped.
 
 ## Sessions and turns
 
