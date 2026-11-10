@@ -623,8 +623,8 @@ def repo-of-file [repos: record, path: string]: nothing -> any {
   $repos | get -o ($path | path dirname)
 }
 
-# Paths git ignores, checked once per checkout. A path whose directory is gone is kept, since a
-# checkout ignores its nested worktrees and would otherwise drop them.
+# Paths git ignores, checked once per checkout. A path whose directory is gone is never ignored,
+# since a deleted sibling worktree resolves to its main checkout, whose check-ignore rejects it.
 def ignored-paths [repos: record, paths: list<string>]: nothing -> list<string> {
   $paths
   | where {|path| $path | path dirname | path exists }

@@ -45,7 +45,6 @@ def git-repo [dir: string, name: string]: nothing -> string {
 
   (
     "
-    .claude/worktrees/
     .claude/agent-memory-local/
 
     "
@@ -245,7 +244,6 @@ def digest-run [
 
   {
     excludedDirs: [
-      '/\.claude/worktrees/workmux/'
       '/[^/]+__worktrees/workmux-'
     ]
     labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
@@ -1023,8 +1021,8 @@ def "test repositories resolve subdirectories and worktrees, and missing paths r
     {
       name: "gone"
       clock: "10:03"
-      cwd: ($app | path join ".claude/worktrees/gone")
-      file: ($app | path join ".claude/worktrees/gone/d.nu")
+      cwd: ($dir | path join "app__worktrees/gone")
+      file: ($dir | path join "app__worktrees/gone/d.nu")
       repo: "app"
       repos: {app: 1.0}
     }
@@ -1074,9 +1072,9 @@ def "test a checkout behind a symlinked parent keeps its writes" [] {
       file_path: ($linked | path join "src/a.nu")
       content: "x"
     })
-    (claude-prompt $linked "10:05" "then the deleted worktree")
+    (claude-prompt $linked "10:05" "then the removed directory")
     (claude-tool $linked "10:06" "Write" {
-      file_path: ($linked | path join ".claude/worktrees/gone/b.nu")
+      file_path: ($linked | path join ".claude/agent-memory-local/gone/b.nu")
       content: "x"
     })
   ]
@@ -1120,7 +1118,7 @@ def "test writes git ignores count only while their directory exists" [] {
     (claude-prompt $app "10:00" "write files")
     (claude-tool $app "10:01" "Write" {file_path: ($app | path join "src/a.nu"), content: "x"})
     (claude-tool $app "10:02" "Write" {
-      file_path: ($app | path join ".claude/worktrees/gone/src/b.nu")
+      file_path: ($app | path join ".claude/agent-memory-local/gone/src/b.nu")
       content: "x"
     })
     (claude-tool $app "10:03" "Write" {
