@@ -43,15 +43,15 @@ Hours are rounded to four decimals internally. The skill rounds the report itsel
 
 ## Repositories and shares
 
-Every written path and every session `cwd` is resolved to the repository holding it with `git rev-parse`. A linked worktree resolves to its main checkout, and a deleted sibling worktree resolves to its main checkout before falling back to the nearest existing ancestor. git-ignored files are excluded from shares, except when their directory no longer exists.
+Every written path and every session `cwd` is resolved to the repository holding it with `git rev-parse`. A linked worktree resolves to its main checkout, and a deleted sibling worktree resolves to its main checkout before falling back to the nearest existing ancestor. git-ignored files are excluded from shares when they resolve inside a checkout, including files under a directory that no longer exists inside it. A file in a deleted sibling worktree under `<name>__worktrees` counts, because its repository resolves to the main checkout while the path lies outside it.
 
-A unit's `repos` splits its distinct written files among the repositories, largest share first. A prompt with no writes keeps an empty `repos`, and the skill falls back to its session's `repo`.
+A unit's `repos` splits its distinct written files among the repositories, rounded to two decimals and ordered largest first. A prompt with no writes keeps an empty `repos`.
 
 ## Days and output
 
 A day covers `[00:00, next 00:00)` in local time and lists:
 
-- **sessions**: each session with prompts credited that day, the replies of turns started that day, and prompts from earlier days whose turns started that day.
+- **sessions**: each session with a prompt credited that day or a continuation that day, with its prompts for the day, the final replies from its first prompt that day until its next prompt on a later day, and its continuations. A session listed only through a continuation has no prompts and no replies.
 - **runs**: agent work that no prompt started, with turns started that day.
 
 The top level repeats `labels`, maps each repository name in the output to its root in `repositories`, and holds one entry per date in `days`. A repeated directory name keeps the first root found.

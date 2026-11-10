@@ -15,7 +15,7 @@
 
 - Run the pre-commit hooks on every commit. In each new checkout or worktree, run `nix develop -c true` once to install them. Never bypass the hooks with `--no-verify` or `PRE_COMMIT_ALLOW_NO_CONFIG`, and fix the cause whenever a hook, test, or CI job fails.
 - Wrap code and comments at 100 columns, counting the indent, end section banners at column 100, and keep a single-line string literal whole at any length.
-- Update whatever the change makes stale: the README's usage and configuration, the reference page, and `skills/activity-report/SKILL.md`.
+- Update whatever the change makes stale: the README's usage and configuration, the reference page, the field reference at `skills/activity-report/references/output.md`, and `skills/activity-report/SKILL.md`.
 - Issues, pull requests, and their comments link only public material. Never reference local working notes, private paths, or private repositories. Transcripts hold conversation text, paths, and occasionally secrets, so redact all three from anything you paste.
 
 ## Verification
