@@ -6,8 +6,7 @@
 
 use std/assert
 
-const SCRIPT_DIR = path self .
-const SCRIPT = ($SCRIPT_DIR | path dirname | path join "activity-digest.nu")
+const SCRIPT = path self "../activity-digest.nu"
 
 export const DAY = "2026-10-15"
 const HUMAN = {origin: {kind: "human"}}

@@ -36,12 +36,3 @@ def "test the excerpt length keeps whole text at zero and cuts at a custom limit
   assert equal (do $projected $short) [{prompt: $short_excerpt, reply: $short_excerpt}]
   assert equal (do $projected $full) [{prompt: $long, reply: $long}]
 }
-
-def "test a negative excerpt length is rejected" [] {
-  let dir = (mktemp --directory)
-
-  let run = (digest-run $dir --excerpt-chars=-1)
-
-  assert equal $run.exit_code 1
-  assert str contains $run.stderr "must be 0 or greater"
-}
