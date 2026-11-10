@@ -104,6 +104,14 @@ Dates are local `YYYY-MM-DD` dates. Omitting the second date reports that day al
 
 The command prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned.
 
+## Privacy
+
+Treat a digest and a report as private, and redact paths, tokens, and conversation text before sharing either.
+
+The command writes no state. It holds no credentials, opens no network connections, and runs no commands from the assistant stores. `excludedDirs` removes human hours from matching sessions, while their agent work still appears as runs.
+
+The [agent skill](skills/activity-report/SKILL.md) asks the assistant to run `git`, `gh`, `glab`, `vdirsyncer`, and `khal`. Those commands read the same machine and reach the forge and calendar the user is signed in to, so install the skill only where that access is intended.
+
 ## Tested with
 
 The transcript formats change without notice. The digest is tested on Linux against these versions:
