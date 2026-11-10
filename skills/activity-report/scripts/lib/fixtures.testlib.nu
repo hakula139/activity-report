@@ -6,7 +6,7 @@
 
 use std/assert
 
-const SCRIPT = path self "../activity-digest.nu"
+const SCRIPT = path self "../activity-report.nu"
 
 export const DAY = "2026-10-15"
 const HUMAN = {origin: {kind: "human"}}
@@ -228,27 +228,41 @@ export def digest-run [
   --to: string
   --tz: string = "UTC"
 ]: nothing -> record {
-  let config_file = ($dir | path join "config.json")
+  let config_file = ($dir | path join "config.toml")
+
+  let config = (
+    {
+      excludedDirs: ["/[^/]+__worktrees/workmux-"]
+      labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
+      readingMinutes: 10
+      maxMinutes: 60
+      agentMaxMinutes: 120
+      agentIdleMinutes: 30
+      assistantDirs: {
+        claude: ($dir | path join "claude")
+        codex: ($dir | path join "codex")
+        omp: ($dir | path join "omp")
+      }
+    }
+    | merge $overrides
+  )
 
   {
-    excludedDirs: ["/[^/]+__worktrees/workmux-"]
-    labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
-    readingMinutes: 10
-    maxMinutes: 60
-    agentMaxMinutes: 120
-    agentIdleMinutes: 30
-    assistantDirs: {
-      claude: ($dir | path join "claude")
-      codex: ($dir | path join "codex")
-      omp: ($dir | path join "omp")
+    excluded_dirs: $config.excludedDirs
+    labels: $config.labels
+    hours: {
+      reading_minutes: $config.readingMinutes
+      max_minutes: $config.maxMinutes
+      agent_max_minutes: $config.agentMaxMinutes
+      agent_idle_minutes: $config.agentIdleMinutes
     }
+    assistants: $config.assistantDirs
   }
-  | merge $overrides
-  | to json
+  | to toml
   | save --force $config_file
 
   let args = (
-    ([--config $config_file ($from | default $DAY) $to] | compact)
+    ([digest --config $config_file ($from | default $DAY) $to] | compact)
     ++ [$"--excerpt-chars=($excerpt_chars)"]
   )
   with-env {TZ: $tz} {

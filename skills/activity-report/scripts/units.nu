@@ -100,7 +100,7 @@ export def agent-hours [cfg: record]: list<record> -> float {
   let spent = (
     $in
     | reduce --fold 0sec {|t, acc|
-      $acc + (([$t.end ($t.ts + $cfg.agentMaxMinutes * 1min) $t.idle] | compact | math min) - $t.ts)
+      $acc + (([$t.end ($t.ts + $cfg.hours.agent_max_minutes * 1min) $t.idle] | compact | math min) - $t.ts)
     }
   )
   ($spent / 1hr) | math round --precision 4
@@ -124,8 +124,8 @@ export def credit-prompts [cfg: record, units: record]: list -> list<record> {
   | enumerate
   | each {|p|
     let until = [
-      ($p.item.end + $cfg.readingMinutes * 1min)
-      ($p.item.ts + $cfg.maxMinutes * 1min)
+      ($p.item.end + $cfg.hours.reading_minutes * 1min)
+      ($p.item.ts + $cfg.hours.max_minutes * 1min)
       ($timeline | get -o ($p.index + 1) | get -o ts)
     ]
     let hours = ((($until | compact | math min) - $p.item.ts) / 1hr)

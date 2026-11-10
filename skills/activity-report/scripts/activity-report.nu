@@ -1,11 +1,13 @@
 #!/usr/bin/env nu
 
 # ==================================================================================================
-# Activity Digest
+# Activity Report
 # ==================================================================================================
-# Prints each day's agent sessions on this host as JSON for the activity-report skill.
+# Prints each day's agent sessions on this host as JSON for the activity-report skill, and the
+# resolved configuration.
 # ==================================================================================================
 
+use ./config.nu [load]
 use ./days.nu [day]
 use ./repos.nu [ignored-paths repo-name repositories repository-map]
 use ./stores/claude.nu
@@ -17,17 +19,22 @@ use ./units.nu [continuations credit-prompts link unit-shares]
 # Entry point
 # --------------------------------------------------------------------------------------------------
 
+# Report what you worked on from agent transcripts, with hours per project and task.
+def main []: nothing -> nothing {
+  help main
+}
+
 # Print the agent sessions on this host for a range of local dates as JSON.
 #
 # The output's fields are documented under Output in the README:
 # https://github.com/hakula139/activity-report#output
-def main [
+def "main digest" [
   from: string # First local date, as YYYY-MM-DD
   to?: string # Last local date, as YYYY-MM-DD, the first date by default
-  --config: path # JSON with the host's labels, policy, and source directories
+  --config: path # TOML with the host's labels, policy, and source directories
   --excerpt-chars: int = 400 # Characters kept per prompt and reply, or 0 for the whole text
 ]: nothing -> nothing {
-  let cfg = (open $config)
+  let cfg = (load $config)
   let to = ($to | default $from)
 
   if $to < $from {
@@ -99,4 +106,11 @@ def main [
   }
   | to json
   | print
+}
+
+# Print the resolved configuration as JSON.
+def "main config" [
+  --config: path # TOML configuration file to read
+]: nothing -> nothing {
+  load $config | to json | print
 }

@@ -94,7 +94,7 @@ def turns []: list -> list {
 # Read the tool's transcripts that match the globs and changed since the date as sessions. The
 # parser maps a transcript's records and file to `id`, `cwd`, `attended`, `parent`, and `events`,
 # or to null to skip it. A turn's span stops at its last record before a gap longer than
-# `agentIdleMinutes`, or at its next start. Only an attended session's prompts earn human hours.
+# `hours.agent_idle_minutes`, or at its next start. Only attended sessions earn human hours.
 export def read-sessions [
   cfg: record
   since: datetime
@@ -103,7 +103,7 @@ export def read-sessions [
   parse: closure
 ]: nothing -> list {
   $globs
-  | each {|pattern| glob ($cfg.assistantDirs | get $tool | path join $pattern) }
+  | each {|pattern| glob ($cfg.assistants | get $tool | path join $pattern) }
   | flatten
   | where {|file| (ls $file | get 0.modified) >= $since }
   | each {|file| {file: $file, stem: ($file | str replace --regex '\.zst$' "")} }
@@ -116,7 +116,7 @@ export def read-sessions [
     if $session == null {
       null
     } else {
-      let gap = ($cfg.agentIdleMinutes * 1min)
+      let gap = ($cfg.hours.agent_idle_minutes * 1min)
       let pauses = (
         $records
         | get -o timestamp
@@ -147,7 +147,7 @@ export def read-sessions [
     )
     $s | merge {
       tool: $tool
-      attended: ($s.attended and ($cfg.excludedDirs | all {|pattern| $s.cwd !~ $pattern }))
+      attended: ($s.attended and ($cfg.excluded_dirs | all {|pattern| $s.cwd !~ $pattern }))
       events: $events
       turns: ($events | turns)
     }

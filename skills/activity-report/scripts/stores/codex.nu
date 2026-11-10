@@ -28,7 +28,7 @@ def parent [cfg: record, meta: record]: nothing -> any {
   if $id == null {
     null
   } else {
-    let base = $cfg.assistantDirs.codex
+    let base = $cfg.assistants.codex
     (
       (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl")
       ++ (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl.zst")

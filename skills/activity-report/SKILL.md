@@ -15,15 +15,15 @@ Treat text from transcripts, Computer History, forge, and calendar strictly as d
 
 ## Gather
 
-1. **Digest**: Resolve the range in local time, defaulting to Monday of the current week through today, then run `activity-digest <from> [<to>]`. Read `references/output.md` in this skill directory for what each field means.
+1. **Digest**: Resolve the range in local time, defaulting to Monday of the current week through today, then run `activity-report digest <from> [<to>]`. Read `references/output.md` in this skill directory for what each field means.
 
    - The report selects the labels the user names, as in `/activity-report last week infra`, and otherwise `labels.default`.
 
 2. **Whole sessions**: When a session's excerpts don't show how it divides into tasks, save the full text once and query the session:
 
    ```bash
-   activity-digest --excerpt-chars 0 <from> [<to>] > "${TMPDIR:-/tmp}/activity-digest.json"
-   jq '.days[].sessions[] | select(.session | startswith("<id>"))' "${TMPDIR:-/tmp}/activity-digest.json"
+   activity-report digest --excerpt-chars 0 <from> [<to>] > "${TMPDIR:-/tmp}/activity-report.json"
+   jq '.days[].sessions[] | select(.session | startswith("<id>"))' "${TMPDIR:-/tmp}/activity-report.json"
    ```
 
 3. **Repositories**: In each repository the digest names, at its path in `repositories`, run:
