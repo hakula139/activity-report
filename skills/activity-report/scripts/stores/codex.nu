@@ -4,8 +4,22 @@
 # Maps Codex transcript records to events.
 # ==================================================================================================
 
-use ../lib/text.nu [content-text strip-request-prefix]
+use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
+
+# Mirrors how Codex Desktop extracts the request from a prompt.
+const REQUEST_HEADING = "## My request( for Codex)?:"
+
+def strip-request-prefix []: string -> string {
+  let text = $in
+  let parts = ($text | split row --regex $REQUEST_HEADING)
+
+  if ($parts | length) == 1 {
+    $text
+  } else {
+    $parts | last | str trim
+  }
+}
 
 # The transcript of the thread that delegated to a Codex session, or null. Subagents and guardian
 # reviews both carry `parent_thread_id` at the top level of the session metadata.

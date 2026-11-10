@@ -62,7 +62,7 @@ def claude-question [r: record]: nothing -> any {
   }
 }
 
-# Subagents end their run with a SubagentHandback call.
+# Subagents end their run with a SubagentHandback call in place of a final text reply.
 def claude-reply [r: record]: nothing -> bool {
   $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
 }

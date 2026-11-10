@@ -4,9 +4,6 @@
 # Message text and excerpts for prompts and replies.
 # ==================================================================================================
 
-# Mirrors how Codex Desktop extracts the request from a prompt.
-const REQUEST_HEADING = "## My request( for Codex)?:"
-
 # A message's content is a string or a list of typed parts, of which only text parts carry text.
 export def content-text []: any -> string {
   let content = $in
@@ -40,16 +37,5 @@ export def excerpt [chars: int]: string -> string {
     } else {
       $flat
     }
-  }
-}
-
-export def strip-request-prefix []: string -> string {
-  let text = $in
-  let parts = ($text | split row --regex $REQUEST_HEADING)
-
-  if ($parts | length) == 1 {
-    $text
-  } else {
-    $parts | last | str trim
   }
 }

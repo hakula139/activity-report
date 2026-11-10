@@ -7,7 +7,7 @@
 use ./repos.nu [physical]
 
 # A transcript may end in a partial line while its session is still being written.
-export def read-transcript [file: string]: nothing -> list {
+def read-transcript [file: string]: nothing -> list {
   let raw = if ($file | str ends-with ".zst") {
     ^zstd -dc $file
   } else {
@@ -44,7 +44,7 @@ export def read-transcript [file: string]: nothing -> list {
 # collect the files written until that start. A write therefore belongs to the latest start before
 # it in its own session. A turn holds a prompt or model output, so a start with only a local
 # command is dropped, and a turn with neither reply nor model output ends where it started.
-export def turns []: list -> list {
+def turns []: list -> list {
   $in
   | reverse
   | generate {|event, state: record = {
