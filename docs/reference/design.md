@@ -4,7 +4,7 @@
 
 ## Inputs
 
-A run reads a TOML config with three inputs beyond the time limits: `assistants`, `labels`, and `excluded_dirs`. Each assistant directory holds the same store the assistant writes. The digest never writes to any of them.
+A run reads a TOML config with four inputs: `assistants`, `labels`, `excluded_dirs`, and `hours`. Each assistant directory holds the same store the assistant writes. The digest never writes to any of them.
 
 | Assistant   | Sessions read from                                        |
 | ----------- | --------------------------------------------------------- |

@@ -11,8 +11,9 @@ Use the [release skill](https://github.com/hakula139/plugins/blob/main/plugins/h
 
 Within a minor version, stable releases keep these compatible:
 
-- Flags, positional dates, and exit codes
-- The flake's `packages` and `overlays.default` outputs
+- Flags, positional dates, subcommands, and exit codes
+- The config file's path, keys, and defaults
+- The flake's `packages`, `overlays.default`, and `homeModules.default` outputs
 - The digest's JSON output, covering the `days`, `labels`, and `repositories` keys and the fields under them
 - The skill's report layout, covering the Projects table, the Days lines, the 0.5-hour rounding, and the labels selection
 

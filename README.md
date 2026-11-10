@@ -31,40 +31,33 @@ The package wraps the command with `git` and `zstd`, so both are on its `PATH`. 
 
 The first run may ask to allow the project's Cachix cache. Declining is fine, since the package builds from cache.nixos.org.
 
-With Home Manager, import the flake's `homeModules.default` and set `programs.activity-report.enable = true`. The module installs the command and links the skill into `skillDirectories`, which defaults to `.agents/skills` and `.claude/skills`. Its `settings` option writes the [configuration](#configuration) below to `activity-report/config.toml`.
+Home Manager users add the flake input and import the module:
+
+```nix
+inputs.activity-report.url = "github:hakula139/activity-report";
+
+# In the Home Manager configuration
+imports = [ inputs.activity-report.homeModules.default ];
+
+programs.activity-report.enable = true;
+```
+
+The module installs the command and links the skill into `~/.agents/skills` and `~/.claude/skills`. Set `programs.activity-report.skillDirectories` to change the list. Its `settings` option writes the [configuration](#configuration) below to `activity-report/config.toml`.
 
 ## Configuration
 
 The command reads `${XDG_CONFIG_HOME:-~/.config}/activity-report/config.toml`, and `--config` names another file. A missing file at the default path means the built-in defaults, while a missing `--config` file is an error. Tables deep-merge over the defaults, and lists replace them.
 
 ```toml
-excluded_dirs = []
-
-[assistants]
-claude = "~/.claude"
-codex = "~/.codex"
-omp = "~/.omp/agent"
-
 [hours]
-reading_minutes = 10
-max_minutes = 60
-agent_max_minutes = 120
-agent_idle_minutes = 30
+reading_minutes = 15
+max_minutes = 90
 
 [labels]
-default = []
+default = ["work"]
 
 [labels.projects]
-# my-project = ["personal"]
-
-[sources]
-enabled = []
-
-[sources.gitlab]
-host = ""
-
-[report]
-instructions = ""
+my-project = ["personal"]
 ```
 
 | Key                        | Default                                | Meaning                                                                                          |
@@ -77,11 +70,8 @@ instructions = ""
 | `hours.max_minutes`        | `60`                                   | Most minutes a single prompt can earn                                                            |
 | `hours.agent_max_minutes`  | `120`                                  | Most agent minutes a single turn can earn                                                        |
 | `hours.agent_idle_minutes` | `30`                                   | Longest gap in minutes between a turn's records before the rest of the turn earns no time        |
-| `labels.default`           | `[]`                                   | Labels given to a project without an entry in `labels.projects`; empty covers every task         |
+| `labels.default`           | `[]`                                   | Labels given to a project without an entry in `labels.projects`. An empty list covers every task |
 | `labels.projects`          | `{}`                                   | Labels of each project by repository directory name                                              |
-| `sources.enabled`          | `[]`                                   | Sources the report queries: `github`, `gitlab`, `calendar`, or `computer-history`                |
-| `sources.gitlab.host`      | `""`                                   | GitLab host, with the empty string for `glab`'s default                                          |
-| `report.instructions`      | `""`                                   | Instructions appended to the skill's rules                                                       |
 
 ## Usage
 
@@ -96,7 +86,7 @@ Dates are local `YYYY-MM-DD` dates. Omitting the second date reports that day al
 
 ## Output
 
-The command prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned. `activity-report config` prints the resolved configuration as JSON.
+`activity-report digest` prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned.
 
 ## Privacy
 

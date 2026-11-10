@@ -1,5 +1,5 @@
 # ==================================================================================================
-# Activity Digest: Units
+# Activity Report: Units
 # ==================================================================================================
 # Units, their repository shares and agent time, human credit, and continuations.
 # ==================================================================================================
@@ -100,7 +100,12 @@ export def agent-hours [cfg: record]: list<record> -> float {
   let spent = (
     $in
     | reduce --fold 0sec {|t, acc|
-      $acc + (([$t.end ($t.ts + $cfg.hours.agent_max_minutes * 1min) $t.idle] | compact | math min) - $t.ts)
+      let cap = (
+        [$t.end ($t.ts + $cfg.hours.agent_max_minutes * 1min) $t.idle]
+        | compact
+        | math min
+      )
+      $acc + ($cap - $t.ts)
     }
   )
   ($spent / 1hr) | math round --precision 4

@@ -8,7 +8,7 @@
 # Defaults
 # --------------------------------------------------------------------------------------------------
 
-export const DEFAULTS = {
+const DEFAULTS = {
   excluded_dirs: []
   assistants: {
     claude: "~/.claude"
@@ -25,15 +25,6 @@ export const DEFAULTS = {
     default: []
     projects: {}
   }
-  sources: {
-    enabled: []
-    gitlab: {
-      host: ""
-    }
-  }
-  report: {
-    instructions: ""
-  }
 }
 
 # The environment's value for `name`, or `fallback` when the variable is unset or empty.
@@ -42,12 +33,17 @@ def environment-path [name: string, fallback: string]: nothing -> string {
   if ($value | is-empty) { $fallback } else { $value }
 }
 
-# The assistant directories as the environment names them, before the home defaults.
+# The assistant directories as the environment names them, before the file or the home defaults.
 def environment-assistants []: nothing -> record {
-  {
-    claude: (environment-path "CLAUDE_CONFIG_DIR" "~/.claude")
-    codex: (environment-path "CODEX_HOME" "~/.codex")
-    omp: "~/.omp/agent"
+  let names = {claude: "CLAUDE_CONFIG_DIR", codex: "CODEX_HOME"}
+
+  $DEFAULTS.assistants
+  | columns
+  | reduce --fold {} {|tool, acc|
+    let name = ($names | get -o $tool)
+    let fallback = ($DEFAULTS.assistants | get $tool)
+    let dir = if $name == null { $fallback } else { environment-path $name $fallback }
+    $acc | upsert $tool $dir
   }
 }
 
@@ -60,14 +56,21 @@ def kind [value: any]: nothing -> string {
   $value | describe | str replace --regex '<.*>' ''
 }
 
-def type-error [path: string, expected: string, actual: string]: nothing -> error {
-  error make {msg: $"Config key `($path)` must be ($expected), but is ($actual)"}
+def type-error [path: string, expected: string, actual: string, file: string]: nothing -> error {
+  error make {msg: $"Config key `($path)` must be ($expected), but is ($actual) in `($file)`"}
+}
+
+# Raise unless every item of `value` is a string.
+def check-strings [value: list, path: string, file: string]: nothing -> nothing {
+  if ($value | any {|item| (kind $item) != "string" }) {
+    error make {msg: $"Config key `($path)` must be a list of strings in `($file)`"}
+  }
 }
 
 # `labels.projects` maps any project name to a list of labels.
-def check-projects [value: any, path: string]: nothing -> nothing {
+def check-projects [value: any, path: string, file: string]: nothing -> nothing {
   if (kind $value) != "record" {
-    type-error $path "record" (kind $value)
+    type-error $path "record" (kind $value) $file
   }
 
   for name in ($value | columns) {
@@ -75,35 +78,19 @@ def check-projects [value: any, path: string]: nothing -> nothing {
     let item = $"($path).($name)"
 
     if (kind $labels) != "list" {
-      type-error $item "list" (kind $labels)
+      type-error $item "list" (kind $labels) $file
     }
-
-    if ($labels | any {|label| (kind $label) != "string" }) {
-      error make {msg: $"Config key `($item)` must be a list of strings"}
-    }
-  }
-}
-
-# The only sources this release reads.
-def check-sources [value: list]: nothing -> nothing {
-  let allowed = ["github" "gitlab" "calendar" "computer-history"]
-
-  for source in $value {
-    if $source not-in $allowed {
-      error make {
-        msg: $"Config key `sources.enabled` has unknown source `($source)`, expected one of ($allowed | str join ', ')"
-      }
-    }
+    check-strings $labels $item $file
   }
 }
 
 # Reject an unknown key, and a leaf whose type differs from its default.
-def validate [config: record, schema: record, prefix: string]: nothing -> nothing {
+def validate [config: record, schema: record, prefix: string, file: string]: nothing -> nothing {
   for key in ($config | columns) {
     let path = (if $prefix == "" { $key } else { $"($prefix).($key)" })
 
     if $key not-in ($schema | columns) {
-      error make {msg: $"Unknown config key `($path)`"}
+      error make {msg: $"Unknown config key `($path)` in `($file)`"}
     }
 
     let value = ($config | get $key)
@@ -112,36 +99,16 @@ def validate [config: record, schema: record, prefix: string]: nothing -> nothin
     let actual = (kind $value)
 
     if $path == "labels.projects" {
-      check-projects $value $path
+      check-projects $value $path $file
     } else if $expected == "record" {
       if $actual != "record" {
-        type-error $path $expected $actual
+        type-error $path $expected $actual $file
       }
-      validate $value $default $path
+      validate $value $default $path $file
     } else if $actual != $expected {
-      type-error $path $expected $actual
-    } else if $path == "sources.enabled" {
-      check-sources $value
-    }
-  }
-}
-
-# --------------------------------------------------------------------------------------------------
-# Merge
-# --------------------------------------------------------------------------------------------------
-
-# Tables merge over the defaults, and lists replace them.
-def deep-merge [base: record, over: record]: nothing -> record {
-  $over
-  | columns
-  | reduce --fold $base {|key, acc|
-    let value = ($over | get $key)
-    let old = ($acc | get -o $key)
-
-    if (kind $value) == "record" and (kind $old) == "record" {
-      $acc | upsert $key (deep-merge $old $value)
-    } else {
-      $acc | upsert $key $value
+      type-error $path $expected $actual $file
+    } else if $expected == "list" {
+      check-strings $value $path $file
     }
   }
 }
@@ -166,23 +133,34 @@ export def load [path?: path]: nothing -> record {
   )
 
   let config = if ($file | path exists) {
-    open $file
+    open --raw $file | from toml
   } else if $path != null {
     error make {msg: $"Config file `($path)` does not exist"}
   } else {
     {}
   }
 
-  validate $config $DEFAULTS ""
+  validate $config $DEFAULTS "" $file
 
   (
-    (deep-merge ($DEFAULTS | upsert assistants (environment-assistants)) $config)
-    | update assistants {
-      {
-        claude: ($in.claude | path expand --no-symlink)
-        codex: ($in.codex | path expand --no-symlink)
-        omp: ($in.omp | path expand --no-symlink)
-      }
-    }
+    ($DEFAULTS | upsert assistants (environment-assistants))
+    | merge deep --strategy overwrite $config
   )
+  | update assistants {
+    let assistants = $in
+
+    $assistants
+    | columns
+    | reduce --fold {} {|tool, acc|
+      let dir = ($assistants | get $tool)
+
+      if not ($dir | str starts-with "/") and not ($dir | str starts-with "~") {
+        error make {
+          msg: $"Config key `assistants.($tool)` must be an absolute path or start with ~ in `($file)`"
+        }
+      }
+
+      $acc | upsert $tool ($dir | path expand --no-symlink)
+    }
+  }
 }

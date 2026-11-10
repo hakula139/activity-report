@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # ==================================================================================================
-# Activity Digest: Config Tests
+# Activity Report: Config Tests
 # ==================================================================================================
 
 use std/assert
@@ -26,8 +26,6 @@ def resolved [home: string]: nothing -> record {
       agent_idle_minutes: 30
     }
     labels: {default: [], projects: {}}
-    sources: {enabled: [], gitlab: {host: ""}}
-    report: {instructions: ""}
   }
 }
 
@@ -68,6 +66,15 @@ def "test assistant directories come from the file, then a nonempty variable, th
   }
 }
 
+def "test an explicit config path is read as TOML whatever its extension" [] {
+  let file = (mktemp --directory | path join "activity-report.conf")
+  {hours: {max_minutes: 90}} | to toml | save $file
+
+  let config = (load $file)
+
+  assert equal $config.hours.max_minutes 90
+}
+
 def "test invalid keys and values are rejected with their dotted key" [] {
   let cases = [
     {
@@ -96,6 +103,16 @@ def "test invalid keys and values are rejected with their dotted key" [] {
       message: "Config key `excluded_dirs` must be list, but is string"
     }
     {
+      name: "excluded dir type"
+      config: {excluded_dirs: [1]}
+      message: "Config key `excluded_dirs` must be a list of strings"
+    }
+    {
+      name: "default labels type"
+      config: {labels: {default: [2]}}
+      message: "Config key `labels.default` must be a list of strings"
+    }
+    {
       name: "projects type"
       config: {labels: {projects: ["work"]}}
       message: "Config key `labels.projects` must be record, but is list"
@@ -111,9 +128,9 @@ def "test invalid keys and values are rejected with their dotted key" [] {
       message: "Config key `labels.projects.app` must be a list of strings"
     }
     {
-      name: "unknown source"
-      config: {sources: {enabled: ["github" "jira"]}}
-      message: "Config key `sources.enabled` has unknown source `jira`, expected one of github, gitlab, calendar, computer-history"
+      name: "relative assistant path"
+      config: {assistants: {claude: "relative"}}
+      message: "Config key `assistants.claude` must be an absolute path or start with ~"
     }
   ]
 
@@ -121,18 +138,15 @@ def "test invalid keys and values are rejected with their dotted key" [] {
     let file = (save-config $c.config)
     let message = (try { load $file } catch {|e| $e.msg })
 
-    assert equal $message $c.message $c.name
+    assert equal $message $"($c.message) in `($file)`" $c.name
   }
 }
 
 def "test a config file overrides nested keys and keeps their sibling defaults" [] {
-  let sources = ["github" "gitlab" "calendar" "computer-history"]
   let file = (save-config {
     excluded_dirs: ["/home/u/scratch"]
     hours: {max_minutes: 90}
     labels: {projects: {app: ["work"]}}
-    sources: {enabled: $sources}
-    report: {instructions: "Be brief."}
   })
   hide-env --ignore-errors CLAUDE_CONFIG_DIR CODEX_HOME
 
@@ -143,8 +157,6 @@ def "test a config file overrides nested keys and keeps their sibling defaults" 
     | update excluded_dirs ["/home/u/scratch"]
     | update hours.max_minutes 90
     | update labels.projects {app: ["work"]}
-    | update sources.enabled $sources
-    | update report.instructions "Be brief."
   )
   assert equal $config $expected
 }

@@ -60,6 +60,7 @@
           };
         };
 
+      # A key lets the module system deduplicate the module when it is imported twice.
       homeModuleKey = "${self}/flake.nix#homeModules.default";
     in
     # ----------------------------------------------------------------------------------------------

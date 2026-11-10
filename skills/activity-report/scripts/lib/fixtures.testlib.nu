@@ -1,5 +1,5 @@
 # ==================================================================================================
-# Activity Digest: Fixtures
+# Activity Report: Fixtures
 # ==================================================================================================
 # Builders shared by the test files, and the digest's invocation on a fixture home.
 # ==================================================================================================
@@ -232,32 +232,24 @@ export def digest-run [
 
   let config = (
     {
-      excludedDirs: ["/[^/]+__worktrees/workmux-"]
+      excluded_dirs: ["/[^/]+__worktrees/workmux-"]
       labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
-      readingMinutes: 10
-      maxMinutes: 60
-      agentMaxMinutes: 120
-      agentIdleMinutes: 30
-      assistantDirs: {
+      hours: {
+        reading_minutes: 10
+        max_minutes: 60
+        agent_max_minutes: 120
+        agent_idle_minutes: 30
+      }
+      assistants: {
         claude: ($dir | path join "claude")
         codex: ($dir | path join "codex")
         omp: ($dir | path join "omp")
       }
     }
-    | merge $overrides
+    | merge deep --strategy overwrite $overrides
   )
 
-  {
-    excluded_dirs: $config.excludedDirs
-    labels: $config.labels
-    hours: {
-      reading_minutes: $config.readingMinutes
-      max_minutes: $config.maxMinutes
-      agent_max_minutes: $config.agentMaxMinutes
-      agent_idle_minutes: $config.agentIdleMinutes
-    }
-    assistants: $config.assistantDirs
-  }
+  $config
   | to toml
   | save --force $config_file
 

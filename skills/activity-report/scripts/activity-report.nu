@@ -19,9 +19,17 @@ use ./units.nu [continuations credit-prompts link unit-shares]
 # Entry point
 # --------------------------------------------------------------------------------------------------
 
-# Report what you worked on from agent transcripts, with hours per project and task.
-def main []: nothing -> nothing {
-  help main
+# Print the agent sessions on this host as JSON, or the resolved config.
+def main [...rest: string] {
+  if ($rest | is-empty) {
+    print (help main)
+    return
+  }
+
+  error make --unspanned {
+    msg: $"Unknown subcommand ($rest | first)"
+    help: "Run 'activity-report --help' to list the commands."
+  }
 }
 
 # Print the agent sessions on this host for a range of local dates as JSON.
@@ -31,7 +39,7 @@ def main []: nothing -> nothing {
 def "main digest" [
   from: string # First local date, as YYYY-MM-DD
   to?: string # Last local date, as YYYY-MM-DD, the first date by default
-  --config: path # TOML with the host's labels, policy, and source directories
+  --config: path # TOML config, default ${XDG_CONFIG_HOME:-~/.config}/activity-report/config.toml
   --excerpt-chars: int = 400 # Characters kept per prompt and reply, or 0 for the whole text
 ]: nothing -> nothing {
   let cfg = (load $config)
@@ -110,7 +118,7 @@ def "main digest" [
 
 # Print the resolved configuration as JSON.
 def "main config" [
-  --config: path # TOML configuration file to read
+  --config: path # TOML config, default ${XDG_CONFIG_HOME:-~/.config}/activity-report/config.toml
 ]: nothing -> nothing {
   load $config | to json | print
 }
