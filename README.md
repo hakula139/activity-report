@@ -7,24 +7,9 @@ Reconstruct what you worked on over a date range, with human and agent hours per
 
 ## The problem
 
-Coding agents already record what happened. Each session stores:
+Coding agents already record what happened. Each session stores its working directory, every prompt and answer, the files it wrote, and which subagents or workers it started. That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
 
-- its working directory
-- every prompt and answer
-- the files it wrote
-- which subagents or workers it started
-
-That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
-
-`activity-digest` reads those stores and prints one JSON document for a range of local dates. For each day it lists:
-
-- the sessions
-- their prompts
-- the reply each prompt produced
-- work that no prompt started
-- the repositories those turns wrote
-
-The [agent skill](#agent-skill) turns that evidence into an hours-by-project and hours-by-task report.
+`activity-digest` reads those stores and prints one JSON document for a range of local dates. For each day it lists the sessions, their prompts, the reply each prompt produced, work that no prompt started, and the repositories those turns wrote. The [agent skill](#agent-skill) turns that evidence into an hours-by-project and hours-by-task report.
 
 ## Install
 
@@ -120,7 +105,7 @@ The transcript formats change without notice. The digest is tested on Linux agai
 | Codex       | 0.167.0 |
 | OMP         | 18.18.1 |
 
-A newer assistant can add a record kind this command ignores, so that activity then goes uncounted. If a report misses work you know happened, open an issue with the release tag or commit you run and the assistant's version. Digest output quotes your prompts, so redact paths, tokens, and conversation text from anything you paste.
+A newer assistant can add a record kind this command ignores, so that activity then goes uncounted. If a report misses work you know happened, open an issue with the release tag or commit you run and the assistant's version.
 
 ## Releases
 
@@ -128,11 +113,7 @@ Releases follow the [versioning policy](RELEASING.md#versioning), and stable rel
 
 ## Agent skill
 
-The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that:
-
-1. reads the digest
-2. gathers repository, forge, calendar, and screen-history evidence
-3. writes the report
+The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report.
 
 The skill assumes the command discovers its configuration, which arrives in a later release.
 
