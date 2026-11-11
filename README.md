@@ -91,7 +91,7 @@ The command prints one JSON document for the requested range. [Output fields](sk
 
 Treat a digest and a report as private, and redact paths, tokens, and conversation text before sharing either.
 
-The command writes no state. It holds no credentials, opens no network connections, and runs no commands from the assistant stores. `excludedDirs` removes human hours from matching sessions, while their agent work still appears as runs.
+The command writes no state. It holds no credentials, opens no network connections, and runs no commands from the assistant stores. `excludedDirs` removes human hours from matching sessions, while their agent work remains in the digest, as a run or under the prompt that delegated to it.
 
 The [agent skill](skills/activity-report/SKILL.md) asks the assistant to run `git`, `gh`, `glab`, `vdirsyncer`, and `khal`. Those commands read the same machine and reach the forge and calendar the user is signed in to, so install the skill only where that access is intended.
 

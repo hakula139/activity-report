@@ -10,7 +10,7 @@ The command and its tests are Nushell. General Nushell conventions and traps liv
 
 | Module                         | Holds                                 | Imports                      |
 | ------------------------------ | ------------------------------------- | ---------------------------- |
-| `transcripts.nu`               | Reads transcripts and projects turns  | `repos`, `lib/text`          |
+| `transcripts.nu`               | Reads transcripts and projects turns  | `repos`                      |
 | `repos.nu`                     | Resolves repositories and shares      |                              |
 | `units.nu`                     | Computes credit and agent time        | `repos`, `lib/text`          |
 | `days.nu`                      | Shapes a day                          | `units`, `repos`, `lib/text` |
