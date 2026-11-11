@@ -1,13 +1,6 @@
 # Design
 
-`activity-digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates:
-
-1. Reads assistant state.
-2. Projects each session into turns.
-3. Links those turns into units owned by a prompt.
-4. Measures the human and agent time each unit earned.
-
-This page records the invariants behind that projection.
+`activity-digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates. It reads assistant state, projects each session into turns, links those turns into units owned by a prompt, and measures the human and agent time each unit earned. This page records the invariants behind that projection.
 
 ## Inputs
 
