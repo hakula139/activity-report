@@ -48,12 +48,13 @@ The module installs the command and links the skill into `~/.agents/skills` and 
 
 ### Skill directories
 
-Install the command through Nix or Home Manager, then clone the repository and link the skill for the assistants that should use it:
+Home Manager creates these links for you. For a Nix-only installation, clone the repository and link the skill for the assistants that should use it:
 
 ```bash
 git clone https://github.com/hakula139/activity-report ~/.local/share/activity-report
+mkdir -p ~/.agents/skills "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 ln -s ~/.local/share/activity-report/skills/activity-report ~/.agents/skills/activity-report
-ln -s ~/.local/share/activity-report/skills/activity-report ~/.claude/skills/activity-report
+ln -s ~/.local/share/activity-report/skills/activity-report "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/activity-report"
 ```
 
 | Directory                                                   | Read by          |
