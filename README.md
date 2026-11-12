@@ -65,7 +65,13 @@ The command takes a JSON config file through `--config`:
 | `agentIdleMinutes` | Longest gap in minutes between a turn's records before the rest of the turn earns no time        |
 | `assistantDirs`    | Absolute state directories for `claude`, `codex`, and `omp`                                      |
 
-Claude Code honors `CLAUDE_CONFIG_DIR`, Codex honors `CODEX_HOME`, and OMP keeps its state under `~/.omp/agent`. Use the absolute paths that apply to the account that ran the sessions.
+Set `assistantDirs` to each assistant's state directory, as an absolute path:
+
+| Assistant   | State directory                       |
+| ----------- | ------------------------------------- |
+| Claude Code | `CLAUDE_CONFIG_DIR`, else `~/.claude` |
+| Codex       | `CODEX_HOME`, else `~/.codex`         |
+| OMP         | `~/.omp/agent`                        |
 
 ## Usage
 
@@ -81,6 +87,14 @@ Dates are local `YYYY-MM-DD` dates. Omitting the second date reports that day al
 
 The command prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned.
 
+## Privacy
+
+Treat a digest and a report as private, and redact paths, tokens, and conversation text before sharing either.
+
+The command writes no state. It holds no credentials, opens no network connections, and runs no commands from the assistant stores. `excludedDirs` removes human hours from matching sessions, while their agent work remains in the digest, as a run or under the prompt that delegated to it.
+
+The [agent skill](skills/activity-report/SKILL.md) asks the assistant to run `git`, `gh`, `glab`, `vdirsyncer`, and `khal`. Those commands read the same machine and reach the forge and calendar the user is signed in to, so install the skill only where that access is intended.
+
 ## Tested with
 
 The transcript formats change without notice. The digest is tested on Linux against these versions:
@@ -91,7 +105,7 @@ The transcript formats change without notice. The digest is tested on Linux agai
 | Codex       | 0.167.0 |
 | OMP         | 18.18.1 |
 
-A newer assistant can add a record kind this command ignores, so that activity then goes uncounted. If a report misses work you know happened, open an issue with the release tag or commit you run and the assistant's version. Digest output quotes your prompts, so redact paths, tokens, and conversation text from anything you paste.
+A newer assistant can add a record kind this command ignores, so that activity then goes uncounted. If a report misses work you know happened, open an issue with the release tag or commit you run and the assistant's version.
 
 ## Releases
 
@@ -99,7 +113,9 @@ Releases follow the [versioning policy](RELEASING.md#versioning), and stable rel
 
 ## Agent skill
 
-The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. The skill assumes the command discovers its configuration, which arrives in a later release.
+The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report.
+
+The skill assumes the command discovers its configuration, which arrives in a later release.
 
 Link or copy the whole directory, never `SKILL.md` alone, because Codex skips a `SKILL.md` that is itself a symlink. Start a new assistant session after linking.
 
