@@ -86,7 +86,7 @@ Dates are local `YYYY-MM-DD` dates. Omitting the second date reports that day al
 
 ## Output
 
-`activity-report digest` prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned.
+`activity-report digest` prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned. `activity-report config` prints the resolved configuration as JSON.
 
 ## Privacy
 
