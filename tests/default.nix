@@ -10,6 +10,7 @@
   activityReport,
   homeModule,
 }:
+
 {
   home-module = import ./home-module { inherit pkgs lib homeModule; };
 

@@ -7,6 +7,7 @@
   lib,
   homeModule,
 }:
+
 let
   eval = lib.evalModules {
     class = "homeManager";
