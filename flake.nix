@@ -29,6 +29,7 @@
   # ------------------------------------------------------------------------------------------------
   outputs =
     {
+      self,
       nixpkgs,
       devkit,
       ...
@@ -46,7 +47,7 @@
         pkgs:
         (devkit.lib.mkLib pkgs).mkNuApplication {
           pname = "activity-report";
-          entry = "activity-digest";
+          entry = "activity-report";
           version = "0.0.0";
           src = ./skills/activity-report/scripts;
           skills = [ ./skills/activity-report ];
@@ -58,12 +59,26 @@
             platforms = lib.platforms.all;
           };
         };
+
+      # A key lets the module system deduplicate the module when it is imported twice.
+      homeModuleKey = "${self}/flake.nix#homeModules.default";
     in
     # ----------------------------------------------------------------------------------------------
-    # Overlay
+    # Overlay and Home Manager Module
     # ----------------------------------------------------------------------------------------------
     {
       overlays.default = final: _: { activity-report = mkActivityReport final; };
+
+      homeModules.default = {
+        _class = "homeManager";
+        _file = homeModuleKey;
+        key = homeModuleKey;
+        imports = [
+          (import ./nix/home-manager.nix {
+            inherit devkit mkActivityReport;
+          })
+        ];
+      };
     }
     // devkit.lib.eachSystem devkit.lib.systems (
       system:
@@ -123,6 +138,37 @@
         # Checks
         # ------------------------------------------------------------------------------------------
         checks = {
+          home-module =
+            let
+              eval = lib.evalModules {
+                class = "homeManager";
+                modules = [
+                  self.homeModules.default
+                  {
+                    options = {
+                      home = {
+                        packages = lib.mkOption { type = lib.types.anything; };
+                        file = lib.mkOption { type = lib.types.anything; };
+                      };
+                      xdg.configFile = lib.mkOption { type = lib.types.anything; };
+                    };
+                    config = {
+                      _module.args.pkgs = pkgs;
+                      programs.activity-report = {
+                        enable = true;
+                        settings.labels.default = [ "work" ];
+                      };
+                    };
+                  }
+                ];
+              };
+            in
+            pkgs.writeText "home-module.json" (
+              builtins.toJSON {
+                inherit (eval.config) home xdg;
+              }
+            );
+
           package = activityReport;
 
           tests = dk.nuTests {

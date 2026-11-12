@@ -4,12 +4,13 @@ The command and its tests are Nushell. General Nushell conventions and traps liv
 
 ## Scripts
 
-- **Entry point**: `skills/activity-report/scripts/activity-digest.nu` holds `def main`, checks its arguments, orders the pipeline, and imports the stores, `repos`, `units`, and `days`.
-- **Config**: the tests build the config as a record and save it as JSON.
+- **Entry point**: `skills/activity-report/scripts/activity-report.nu` holds `def main`. Its `digest` subcommand checks its arguments and orders the pipeline, and its `config` subcommand prints the resolved configuration. The entry imports `config`, the stores, `repos`, `units`, and `days`.
+- **Config**: the tests build the config as a record and save it as TOML.
 - **External tools**: the command calls `git` at a directory and `zstd` on a compressed transcript.
 
 | Module                         | Holds                                 | Imports                      |
 | ------------------------------ | ------------------------------------- | ---------------------------- |
+| `config.nu`                    | Loads and validates the configuration |                              |
 | `transcripts.nu`               | Reads transcripts and projects turns  | `repos`                      |
 | `repos.nu`                     | Resolves repositories and shares      |                              |
 | `units.nu`                     | Computes credit and agent time        | `repos`, `lib/text`          |

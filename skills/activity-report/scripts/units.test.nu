@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # ==================================================================================================
-# Activity Digest: Units Tests
+# Activity Report: Units Tests
 # ==================================================================================================
 
 use std/assert
@@ -288,7 +288,7 @@ def "test an agent turn earns at most the cap" [] {
     (claude-reply "/work/app" "13:00")
   ]
 
-  let day = (digest-day $dir {agentMaxMinutes: 90})
+  let day = (digest-day $dir {hours: {agent_max_minutes: 90}})
 
   assert equal $day.runs.0.agent 1.5
 }
@@ -311,7 +311,7 @@ def "test a prompt earns its turn and a reading allowance until the next prompt 
     (claude-prompt "/work/lib" "13:24" "review the API")
   ]
 
-  let day = (digest-day $dir {readingMinutes: 12})
+  let day = (digest-day $dir {hours: {reading_minutes: 12}})
 
   assert equal ($day.sessions | each { get prompts.hours }) [[1.0 0.3 0.4 0.3] [0.2]]
 }

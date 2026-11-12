@@ -1,5 +1,5 @@
 # ==================================================================================================
-# Activity Digest: Claude Code
+# Activity Report: Claude Code
 # ==================================================================================================
 # Maps Claude Code transcript records to events.
 # ==================================================================================================
@@ -78,7 +78,7 @@ def parent [cfg: record, records: list, file: string]: nothing -> any {
       null
     } else {
       let id = ($team | str replace "session-" "")
-      glob $"($cfg.assistantDirs.claude)/projects/*/($id)*.jsonl" | get -o 0
+      glob $"($cfg.assistants.claude)/projects/*/($id)*.jsonl" | get -o 0
     }
   }
 }

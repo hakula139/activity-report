@@ -23,6 +23,7 @@ statix
 subagent
 subagents
 substituters
+unspanned
 vdirsyncer
 workmux
 worktree

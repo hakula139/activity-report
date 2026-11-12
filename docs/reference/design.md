@@ -1,10 +1,10 @@
 # Design
 
-`activity-digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates. It reads assistant state, projects each session into turns, links those turns into units owned by a prompt, and measures the human and agent time each unit earned. This page records the invariants behind that projection.
+`activity-report digest` turns the transcripts of Claude Code, Codex, and OMP into one JSON document per range of local dates. It reads assistant state, projects each session into turns, links those turns into units owned by a prompt, and measures the human and agent time each unit earned. This page records the invariants behind that projection.
 
 ## Inputs
 
-A run reads a JSON config with three inputs beyond the time limits: `assistantDirs`, `labels`, and `excludedDirs`. Each assistant directory holds the same store the assistant writes. The digest never writes to any of them.
+A run reads a TOML config with four inputs: `assistants`, `labels`, `excluded_dirs`, and `hours`. Each assistant directory holds the same store the assistant writes. The digest never writes to any of them.
 
 | Assistant   | Sessions read from                                        |
 | ----------- | --------------------------------------------------------- |
@@ -24,11 +24,11 @@ Each transcript becomes a session with `id`, `cwd`, `attended`, `parent`, and `e
 - **abort**: a canceled turn, which cannot borrow a later reply.
 - **write**: the files a record wrote.
 - **model**: any model output, which ends a turn that never replied.
-- **pause**: a gap between records longer than `agentIdleMinutes`, inserted by the session reader.
+- **pause**: a gap between records longer than `hours.agent_idle_minutes`, inserted by the session reader.
 
 A turn starts at a prompt or trigger, ends at its first reply or its last model output, and collects the writes that follow its start. Every turn adds its own time, so a parallel delegate spends its own time.
 
-`attended` is false for headless runs (`codex exec`, MCP, SDK entrypoints), sidechains, Codex sessions whose `thread_source` is not `user`, and sessions whose `cwd` matches an entry in `excludedDirs`. Only an attended session's prompts earn human hours.
+`attended` is false for headless runs (`codex exec`, MCP, SDK entrypoints), sidechains, Codex sessions whose `thread_source` is not `user`, and sessions whose `cwd` matches an entry in `excluded_dirs`. Only an attended session's prompts earn human hours.
 
 ## Units
 
@@ -36,8 +36,8 @@ A unit is one prompt plus every delegate turn it started. A session's `parent` n
 
 ## Hours
 
-- **Human credit**: a prompt earns the time until its turn ends, plus `readingMinutes`, cut short by the next prompt in any session and capped at `maxMinutes`.
-- **Agent time**: a unit's turns add the time from each turn's start to the earliest of its end, its start plus `agentMaxMinutes`, and its idle cut. Agent time is counted on the day its turn started, even when the turn continues past midnight.
+- **Human credit**: a prompt earns the time until its turn ends, plus `hours.reading_minutes`, cut short by the next prompt in any session and capped at `hours.max_minutes`.
+- **Agent time**: a unit's turns add the time from each turn's start to the earliest of its end, its start plus `hours.agent_max_minutes`, and its idle cut. Agent time is counted on the day its turn started, even when the turn continues past midnight.
 
 Hours are rounded to four decimals internally. The skill rounds the report itself.
 

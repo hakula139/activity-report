@@ -1,6 +1,6 @@
 # Output fields
 
-`activity-digest` prints one JSON document for the requested range of local dates. Each record below lists its fields, their type or unit, and what each one means.
+`activity-report digest` prints one JSON document for the requested range of local dates. Each record below lists its fields, their type or unit, and what each one means.
 
 ## Top level
 
@@ -58,13 +58,13 @@ Each prompt entry has these fields:
 | `repos` | record of fractions | Repository shares of the files its turns and delegates wrote. Empty when they wrote nothing. |
 | `text`  | string              | Prompt text, cut to `--excerpt-chars` characters, or whole when the option is 0.             |
 
-Human credit is the time from the prompt to the end of its turn, plus `readingMinutes`, cut short by the next prompt in any session and capped at `maxMinutes`. Only attended sessions list prompts. Messages from a headless session, a sidechain session, or a session whose directory matches `excludedDirs` appear under `runs`, or join the prompt that delegated to them.
+Human credit is the time from the prompt to the end of its turn, plus `hours.reading_minutes`, cut short by the next prompt in any session and capped at `hours.max_minutes`. Only attended sessions list prompts. Messages from a headless session, a sidechain session, or a session whose directory matches `excluded_dirs` appear under `runs`, or join the prompt that delegated to them.
 
 A turn the person did not start earns no human credit.
 
 Agent time is the time the prompt's turn and every delegate it started spent, such as a subagent, a teammate, a Codex subagent thread, or an OMP advisor.
 
-A turn runs from its start to its first reply or last model output, is capped at `agentMaxMinutes`, and stops at its last record before a gap longer than `agentIdleMinutes`. Agent time is counted on the day its turn started, even when the turn continues past midnight. Every transcript adds its own time, so parallel delegates each add to the prompt they followed.
+A turn runs from its start to its first reply or last model output, is capped at `hours.agent_max_minutes`, and stops at its last record before a gap longer than `hours.agent_idle_minutes`. Agent time is counted on the day its turn started, even when the turn continues past midnight. Every transcript adds its own time, so parallel delegates each add to the prompt they followed.
 
 A prompt's `repos` counts the distinct files its turns and delegates wrote, groups them by repository, and gives each repository its fraction of the total, rounded to two decimals and ordered largest first. git-ignored files never count when they resolve inside a checkout, including a file under a directory that no longer exists inside that checkout. A file in a deleted sibling worktree under `<name>__worktrees` counts, because its repository attribution resolves to the main checkout while the path lies outside it. A prompt whose turns wrote no files has an empty record.
 

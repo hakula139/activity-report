@@ -1,12 +1,12 @@
 # ==================================================================================================
-# Activity Digest: Fixtures
+# Activity Report: Fixtures
 # ==================================================================================================
 # Builders shared by the test files, and the digest's invocation on a fixture home.
 # ==================================================================================================
 
 use std/assert
 
-const SCRIPT = path self "../activity-digest.nu"
+const SCRIPT = path self "../activity-report.nu"
 
 export const DAY = "2026-10-15"
 const HUMAN = {origin: {kind: "human"}}
@@ -228,27 +228,33 @@ export def digest-run [
   --to: string
   --tz: string = "UTC"
 ]: nothing -> record {
-  let config_file = ($dir | path join "config.json")
+  let config_file = ($dir | path join "config.toml")
 
-  {
-    excludedDirs: ["/[^/]+__worktrees/workmux-"]
-    labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
-    readingMinutes: 10
-    maxMinutes: 60
-    agentMaxMinutes: 120
-    agentIdleMinutes: 30
-    assistantDirs: {
-      claude: ($dir | path join "claude")
-      codex: ($dir | path join "codex")
-      omp: ($dir | path join "omp")
+  let config = (
+    {
+      excluded_dirs: ["/[^/]+__worktrees/workmux-"]
+      labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
+      hours: {
+        reading_minutes: 10
+        max_minutes: 60
+        agent_max_minutes: 120
+        agent_idle_minutes: 30
+      }
+      assistants: {
+        claude: ($dir | path join "claude")
+        codex: ($dir | path join "codex")
+        omp: ($dir | path join "omp")
+      }
     }
-  }
-  | merge $overrides
-  | to json
+    | merge deep --strategy overwrite $overrides
+  )
+
+  $config
+  | to toml
   | save --force $config_file
 
   let args = (
-    ([--config $config_file ($from | default $DAY) $to] | compact)
+    ([digest --config $config_file ($from | default $DAY) $to] | compact)
     ++ [$"--excerpt-chars=($excerpt_chars)"]
   )
   with-env {TZ: $tz} {
