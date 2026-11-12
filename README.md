@@ -5,7 +5,7 @@
 
 Reconstruct what you worked on over a date range, with human and agent hours per project and task, from the transcripts that [Claude Code](https://claude.com/claude-code), [Codex](https://openai.com/codex/), and [OMP](https://omp.sh) keep on your machine.
 
-## The problem
+## How it works
 
 Coding agents already record what happened. Each session stores its working directory, every prompt and answer, the files it wrote, and which subagents or workers it started. That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
 
@@ -29,9 +29,11 @@ nix profile install github:hakula139/activity-report
 
 The package wraps the command with `git` and `zstd`, so both are on its `PATH`. It covers `aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. Flakes must be enabled, as in `nix --extra-experimental-features 'nix-command flakes' run ...` on a stock install.
 
-The first run may ask to allow the project's Cachix cache. Declining is fine, since the package builds from cache.nixos.org.
+The first run may ask to allow the project's Cachix cache. Declining is fine, since the package builds from cache.nixos.org. Nix configurations can also use `overlays.default` to add `activity-report` to their own package set.
 
-Home Manager users add the flake input and import the module:
+### Home Manager
+
+Add the flake input and import the module:
 
 ```nix
 inputs.activity-report.url = "github:hakula139/activity-report";
@@ -42,11 +44,29 @@ imports = [ inputs.activity-report.homeModules.default ];
 programs.activity-report.enable = true;
 ```
 
-The module installs the command and links the skill into `~/.agents/skills` and `~/.claude/skills`. Set `programs.activity-report.skillDirectories` to change the list. Its `settings` option writes the [configuration](#configuration) below to `activity-report/config.toml`.
+The module installs the command and links the skill into `~/.agents/skills` and `~/.claude/skills`. Set `programs.activity-report.skillDirectories` to change those directories, or `programs.activity-report.package` to override the package built from this flake. A non-empty `programs.activity-report.settings` writes the [configuration](#configuration) below to `activity-report/config.toml`, while the default empty value omits the managed file.
+
+### Skill directories
+
+Home Manager creates these links for you. For a Nix-only installation, clone the repository and link the skill for the assistants that should use it:
+
+```bash
+git clone https://github.com/hakula139/activity-report ~/.local/share/activity-report
+mkdir -p ~/.agents/skills "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+ln -s ~/.local/share/activity-report/skills/activity-report ~/.agents/skills/activity-report
+ln -s ~/.local/share/activity-report/skills/activity-report "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/activity-report"
+```
+
+| Directory                                                   | Read by          |
+| ----------------------------------------------------------- | ---------------- |
+| `~/.agents/skills`                                          | Codex, OMP       |
+| `~/.claude/skills`, or `$CLAUDE_CONFIG_DIR/skills` when set | Claude Code, OMP |
+
+Link or copy the whole directory because Codex skips a `SKILL.md` that is itself a symlink. Start a new assistant session after linking.
 
 ## Configuration
 
-The command reads `${XDG_CONFIG_HOME:-~/.config}/activity-report/config.toml`, and `--config` names another file. A missing file at the default path means the built-in defaults, while a missing `--config` file is an error. Tables deep-merge over the defaults, and lists replace them.
+The command reads `${XDG_CONFIG_HOME:-~/.config}/activity-report/config.toml`, and `--config` names another TOML file. A missing file at the default path means the built-in defaults, while a missing `--config` file is an error. Tables deep-merge over the defaults, and lists replace them. Unknown keys and type mismatches are errors that name the dotted key and resolved file.
 
 ```toml
 [hours]
@@ -73,20 +93,34 @@ my-project = ["personal"]
 | `labels.default`           | `[]`                                   | Labels given to a project without an entry in `labels.projects`. An empty list covers every task |
 | `labels.projects`          | `{}`                                   | Labels of each project by repository directory name                                              |
 
+Assistant directories must be absolute or start with `~`, which expands without resolving symlinks. Set `assistants.claude` or `assistants.codex` in TOML to override its environment-derived default.
+
 ## Usage
 
+Running `activity-report` without a subcommand prints the command help. An unknown subcommand exits with an error and points to `--help`.
+
+### Digest
+
 ```bash
-activity-report config
 activity-report digest 2026-10-12
 activity-report digest 2026-10-12 2026-10-16
 activity-report digest --config ./config.toml --excerpt-chars 0 2026-10-12
 ```
 
-Dates are local `YYYY-MM-DD` dates. Omitting the second date reports that day alone, and the second date must not precede the first. `--excerpt-chars` keeps the first N characters of each prompt and reply, and `0` keeps the text whole, which is useful when a whole transcript must be inspected.
+Dates are local `YYYY-MM-DD` dates. Omitting the second date reports the first day alone, and the second date must not precede the first. `--excerpt-chars` keeps the first N characters of each prompt and reply, and `0` keeps the text whole, which is useful when a whole transcript must be inspected.
+
+### Resolved configuration
+
+```bash
+activity-report config
+activity-report config --config ./config.toml
+```
+
+`activity-report config` prints the resolved configuration as JSON, so you can inspect the merged defaults, environment fallbacks, and file overrides before running a digest.
 
 ## Output
 
-`activity-report digest` prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned. `activity-report config` prints the resolved configuration as JSON.
+`activity-report digest` prints one JSON document for the requested range. [Output fields](skills/activity-report/references/output.md) documents every field, its unit, and how hours are earned.
 
 ## Privacy
 
@@ -95,6 +129,10 @@ Treat a digest and a report as private, and redact paths, tokens, and conversati
 The command writes no state. It holds no credentials, opens no network connections, and runs no commands from the assistant stores. `excluded_dirs` removes human hours from matching sessions, while their agent work remains in the digest, as a run or under the prompt that delegated to it.
 
 The [agent skill](skills/activity-report/SKILL.md) asks the assistant to run `git`, `gh`, `glab`, `vdirsyncer`, and `khal`. Those commands read the same machine and reach the forge and calendar the user is signed in to, so install the skill only where that access is intended.
+
+## Agent skill
+
+The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. Its procedure describes attribution, rounding, evidence, and the report format. The skill runs `activity-report digest` with the configuration above.
 
 ## Tested with
 
@@ -111,14 +149,6 @@ A newer assistant can add a record kind this command ignores, so that activity t
 ## Releases
 
 Releases follow the [versioning policy](RELEASING.md#versioning), and stable releases keep the [stability surface](RELEASING.md#stability-surface) compatible within a minor version.
-
-## Agent skill
-
-The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report.
-
-The skill runs `activity-report digest`, which reads the configuration above.
-
-Link or copy the whole directory, never `SKILL.md` alone, because Codex skips a `SKILL.md` that is itself a symlink. Start a new assistant session after linking.
 
 ## Development
 
