@@ -9,7 +9,7 @@ Reconstruct what you worked on over a date range, with human and agent hours per
 
 Coding agents already record what happened. Each session stores its working directory, every prompt and answer, and which subagents or workers it started. That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
 
-`activity-report digest` reads those stores and prints one JSON document for a range of local dates. It stores each unit's prompt, replies, working directory, and contributing sessions once, with daily entries carrying human and agent estimates. The [agent skill](#agent-skill) turns that evidence into an hours-by-project and hours-by-task report.
+`activity-report digest` reads those stores and prints one JSON document for a range of local dates. It stores each unit's prompt, replies, working directory, and contributing sessions once, with daily entries carrying human and agent estimates. The [agent skill](skills/activity-report/SKILL.md) turns that evidence into an hours-by-project and hours-by-task report.
 
 ## Install
 
@@ -99,8 +99,6 @@ All `hours` values must be integers. `reading_minutes` allows zero, and the othe
 
 ## Usage
 
-Running `activity-report` without a subcommand prints the command help. An unknown subcommand exits with an error and points to `--help`.
-
 ### Digest
 
 ```bash
@@ -131,10 +129,6 @@ Treat a digest and a report as private, and redact paths, tokens, and conversati
 The command writes no state. It holds no credentials, opens no network connections, and runs no commands from the assistant stores. `excluded_dirs` removes human hours from matching sessions, while their agent work remains in the digest, as a run or under the prompt that delegated to it.
 
 The [agent skill](skills/activity-report/SKILL.md) asks the assistant to run `git`, `gh`, `glab`, `vdirsyncer`, and `khal`. Those commands read the same machine and reach the forge and calendar the user is signed in to, so install the skill only where that access is intended.
-
-## Agent skill
-
-The repository ships an [Agent Skill](skills/activity-report/SKILL.md) that reads the digest, gathers repository, forge, calendar, and screen-history evidence, and writes the report. Its procedure describes attribution, rounding, evidence, and the report format. The skill runs `activity-report digest` with the configuration above.
 
 ## Tested with
 
