@@ -24,5 +24,5 @@ The command and its tests are Nushell. General Nushell conventions and traps liv
 The checks live in `tests/`. The `tests` check runs the tests through `dk.nuTests`.
 
 - **Builders**: `lib/fixtures.testlib.nu` holds the shared builders, and each test file imports it.
-- **Stores as fixtures**: helpers build transcript records and write them as JSON lines. A repository is a real `git init` with a committed `.gitignore`, because the digest resolves repositories with `git`.
+- **Stores as fixtures**: helpers build transcript records and write them as JSON lines. A repository is a real `git init` with an initial commit, because the digest resolves repositories with `git` and tests create worktrees.
 - **Timestamps**: `digest-run` sets `TZ` for the child process.
