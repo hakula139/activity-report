@@ -28,6 +28,10 @@ export def transcript [dir: string, path: list<string>, records: list]: nothing 
   | each { to json --raw }
   | str join "\n"
   | save $file
+
+  with-env {TZ: "UTC"} {
+    ^touch -t 202701010000 $file
+  }
 }
 
 # A repository whose checkout the digest can find, ignoring agent scratch like the real ones.
@@ -128,6 +132,42 @@ export def claude-tool [
   {type: "assistant", cwd: $cwd, timestamp: (at $clock), message: $message}
 }
 
+export def claude-result [
+  cwd: string
+  clock: string
+  id: string = "tool"
+  --error
+]: nothing -> record {
+  let content = [{
+    type: "tool_result"
+    tool_use_id: $id
+    is_error: $error
+    content: "result"
+  }]
+  {
+    type: "user"
+    cwd: $cwd
+    timestamp: (at $clock)
+    message: {
+      role: "user"
+      content: $content
+    }
+    toolUseResult: {}
+  }
+}
+
+export def claude-write [
+  cwd: string
+  clock: string
+  name: string
+  input: record
+]: nothing -> list<record> {
+  [
+    (claude-tool $cwd $clock $name $input)
+    (claude-result $cwd $clock)
+  ]
+}
+
 export def claude-subagent [
   dir: string
   project: string
@@ -201,6 +241,9 @@ export def codex-transcript [
         --force
         --rm
     )
+    with-env {TZ: "UTC"} {
+      ^touch -t 202701010000 $"($dir | path join ...$path).zst"
+    }
   }
 }
 
@@ -218,6 +261,19 @@ export def omp-reply [clock: string, text: string = "done"]: nothing -> record {
 export def omp-tool [clock: string, calls: list]: nothing -> record {
   let message = {role: "assistant", stopReason: "toolUse", content: $calls}
   {type: "message", timestamp: (at $clock), message: $message}
+}
+
+export def omp-result [clock: string, id: string, --error]: nothing -> record {
+  {
+    type: "message"
+    timestamp: (at $clock)
+    message: {
+      role: "toolResult"
+      toolCallId: $id
+      isError: $error
+      content: "result"
+    }
+  }
 }
 
 export def digest-run [

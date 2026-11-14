@@ -101,6 +101,10 @@ def "test a Codex subagent finds its parent in archived sessions" [] {
     codex-transcript $dir {id: "lead", cwd: $app, thread_source: "user"} (
       codex-turn "11:00" "review it" --done "11:10"
     ) --archived --compressed=$compressed
+    let archived = (glob ($dir | path join "codex/archived_sessions/*") | first)
+    with-env {TZ: "UTC"} {
+      ^touch -t 202601010000 $archived
+    }
     let changes = (
       [($lib | path join "x.rs")]
       | reduce --fold {} {|path, acc| $acc | insert $path {type: "add"} }

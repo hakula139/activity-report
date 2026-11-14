@@ -33,6 +33,7 @@ def "test an OMP read call is not a write" [] {
       {type: "toolCall", id: "r", name: "read", arguments: {path: ($lib | path join "a.ts")}}
       {type: "toolCall", id: "w", name: "write", arguments: {path: "a.ts", content: "a"}}
     ])
+    (omp-result "10:02" "w")
     (omp-reply "10:05")
   ]
 
