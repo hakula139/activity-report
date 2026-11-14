@@ -299,6 +299,7 @@ def "test an old recursive ancestor still owns a recent continuation" [] {
 }
 
 def "test DST days own midnight sides and repeated local clocks" [] {
+  let timezone = ($env.TZDIR? | default "/usr/share/zoneinfo" | path join "America/New_York")
   let cases = [
     {
       from: "2026-03-07"
@@ -332,7 +333,7 @@ def "test DST days own midnight sides and repeated local clocks" [] {
     let output = (digest-output $dir {hours: {reading_minutes: 0}}
       --from $c.from
       --to $c.to
-      --tz "America/New_York"
+      --tz $timezone
     )
 
     let actual = ($output.days | each {|day|

@@ -9,7 +9,8 @@ use std/assert
 const PROBE = path self "dates.testlib.nu"
 
 def "test civil midnights and historical offsets survive DST transitions" [] {
-  let run = (with-env {TZ: "America/New_York"} {
+  let timezone = ($env.TZDIR? | default "/usr/share/zoneinfo" | path join "America/New_York")
+  let run = (with-env {TZ: $timezone} {
     ^$nu.current-exe --no-config-file $PROBE | complete
   })
 
