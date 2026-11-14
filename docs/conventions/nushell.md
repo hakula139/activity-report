@@ -1,23 +1,6 @@
 # Nushell
 
-The command and its tests are Nushell. General Nushell conventions and traps live in the [`nushell` skill](https://github.com/hakula139/plugins/blob/main/plugins/hakula-languages/skills/nushell/SKILL.md) in hakula139/plugins, and this page covers the layout and the rules specific to activity-report.
-
-## Scripts
-
-- **Entry point**: `skills/activity-report/scripts/activity-report.nu` holds `def main`. Its `digest` subcommand checks its arguments and orders the pipeline, and its `config` subcommand prints the resolved configuration. The entry imports `config`, the stores, `repos`, `units`, and `days`.
-- **Config**: the tests build the config as a record and save it as TOML.
-- **External tools**: the command calls `git` at a directory and `zstd` on a compressed transcript.
-
-| Module                         | Holds                                  | Imports                   |
-| ------------------------------ | -------------------------------------- | ------------------------- |
-| `config.nu`                    | Loads and validates the configuration  |                           |
-| `transcripts.nu`               | Reads transcripts and projects turns   | `lib/dates`               |
-| `repos.nu`                     | Resolves session repositories          |                           |
-| `units.nu`                     | Computes credit and agent time         | `lib/text`                |
-| `days.nu`                      | Computes daily unit credit             | `units`, `lib/dates`      |
-| `lib/dates.nu`                 | Converts instants and local civil days |                           |
-| `lib/text.nu`                  | Holds message text and excerpts        |                           |
-| `stores/{claude,codex,omp}.nu` | Map one assistant's records to events  | `transcripts`, `lib/text` |
+The command and its tests are Nushell. General conventions and traps live in the [`nushell` skill](https://github.com/hakula139/plugins/blob/main/plugins/hakula-languages/skills/nushell/SKILL.md) in hakula139/plugins. This page covers activity-report's test constraints.
 
 ## Testing
 
