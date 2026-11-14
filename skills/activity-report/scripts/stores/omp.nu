@@ -82,7 +82,11 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
             | flatten
           )
           if ($paths | is-not-empty) {
-            {kind: "write", ts: $r.timestamp, paths: $paths}
+            {
+              kind: "write"
+              ts: $r.timestamp
+              paths: $paths
+            }
           }
         }
 

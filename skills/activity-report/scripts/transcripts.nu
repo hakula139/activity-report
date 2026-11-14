@@ -109,7 +109,12 @@ def read-session [cfg: record, tool: string, parse: closure, file: string]: noth
     | sort
     | window 2
     | where {|w| ($w.1 - $w.0) > $gap }
-    | each {|w| {kind: "pause", ts: $w.0} }
+    | each {|w|
+      {
+        kind: "pause"
+        ts: $w.0
+      }
+    }
   )
   let events = (
     $session.events
