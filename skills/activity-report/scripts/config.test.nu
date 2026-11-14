@@ -142,6 +142,42 @@ def "test invalid keys and values are rejected with their dotted key" [] {
   }
 }
 
+def "test hour boundaries allow zero reading and independent positive caps" [] {
+  hide-env --ignore-errors CLAUDE_CONFIG_DIR CODEX_HOME
+  let boundary = {
+    reading_minutes: 0
+    max_minutes: 1
+    agent_max_minutes: 1
+    agent_idle_minutes: 2
+  }
+  for hours in [$boundary ($boundary | update reading_minutes 7)] {
+    let file = (save-config {hours: $hours})
+
+    let config = (load $file)
+
+    assert equal $config (resolved $nu.home-dir | update hours $hours)
+  }
+}
+
+def "test hour ranges and types fail with the dotted key" [] {
+  for key in ["reading_minutes" "max_minutes" "agent_max_minutes" "agent_idle_minutes"] {
+    let minimum = if $key == "reading_minutes" { 0 } else { 1 }
+    let values = if $minimum == 0 { [-1 1.5 "1"] } else { [-1 0 1.5 "1"] }
+    for value in $values {
+      let file = (save-config {hours: ({} | insert $key $value)})
+
+      let message = (try { load $file } catch {|e| $e.msg })
+
+      let requirement = if ($value | describe) == "int" {
+        $"at least ($minimum)"
+      } else {
+        $"int, but is ($value | describe)"
+      }
+      assert equal $message $"Config key `hours.($key)` must be ($requirement) in `($file)`"
+    }
+  }
+}
+
 def "test a config file overrides nested keys and keeps their sibling defaults" [] {
   let file = (save-config {
     excluded_dirs: ["/home/u/scratch"]

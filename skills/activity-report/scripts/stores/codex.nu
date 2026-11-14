@@ -72,8 +72,16 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
               | strip-request-prefix
             )
             {kind: "prompt", ts: $r.timestamp, text: $text}
-          } else if $p.type == "item_completed" and $p.item.type? == "FileChange" {
-            {kind: "write", ts: $r.timestamp, paths: ($p.item.changes? | default {} | columns)}
+          } else if (
+            $p.type == "item_completed"
+            and $p.item.type? == "FileChange"
+            and $p.item.status? == "completed"
+          ) {
+            {
+              kind: "write"
+              ts: $r.timestamp
+              paths: ($p.item.changes? | default {} | columns)
+            }
           } else if $p.type == "task_complete" and $p.last_agent_message? != null {
             {kind: "reply", ts: $r.timestamp, text: $p.last_agent_message}
           }

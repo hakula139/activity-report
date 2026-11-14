@@ -8,15 +8,16 @@ The command and its tests are Nushell. General Nushell conventions and traps liv
 - **Config**: the tests build the config as a record and save it as TOML.
 - **External tools**: the command calls `git` at a directory and `zstd` on a compressed transcript.
 
-| Module                         | Holds                                 | Imports                      |
-| ------------------------------ | ------------------------------------- | ---------------------------- |
-| `config.nu`                    | Loads and validates the configuration |                              |
-| `transcripts.nu`               | Reads transcripts and projects turns  | `repos`                      |
-| `repos.nu`                     | Resolves repositories and shares      |                              |
-| `units.nu`                     | Computes credit and agent time        | `repos`, `lib/text`          |
-| `days.nu`                      | Shapes a day                          | `units`, `repos`, `lib/text` |
-| `lib/text.nu`                  | Holds message text and excerpts       |                              |
-| `stores/{claude,codex,omp}.nu` | Map one assistant's records to events | `transcripts`, `lib/text`    |
+| Module                         | Holds                                  | Imports                                   |
+| ------------------------------ | -------------------------------------- | ----------------------------------------- |
+| `config.nu`                    | Loads and validates the configuration  |                                           |
+| `transcripts.nu`               | Reads transcripts and projects turns   | `repos`, `lib/dates`                      |
+| `repos.nu`                     | Resolves repositories and shares       |                                           |
+| `units.nu`                     | Computes credit and agent time         | `repos`, `lib/text`, `lib/dates`          |
+| `days.nu`                      | Shapes a day                           | `units`, `repos`, `lib/text`, `lib/dates` |
+| `lib/dates.nu`                 | Converts instants and local civil days |                                           |
+| `lib/text.nu`                  | Holds message text and excerpts        |                                           |
+| `stores/{claude,codex,omp}.nu` | Map one assistant's records to events  | `transcripts`, `lib/text`                 |
 
 ## Testing
 

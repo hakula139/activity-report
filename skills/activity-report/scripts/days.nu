@@ -4,6 +4,7 @@
 # One day's sessions and runs.
 # ==================================================================================================
 
+use ./lib/dates.nu [next-day]
 use ./lib/text.nu [excerpt]
 use ./repos.nu [shares]
 use ./units.nu [agent-hours]
@@ -17,13 +18,13 @@ use ./units.nu [agent-hours]
 def agent-run [
   cfg: record
   start: datetime
+  end: datetime
   session: record
   turns: list
   repos: record
   ignored: list<string>
   excerpt_chars: int
 ]: nothing -> any {
-  let end = ($start + 1day)
   let today = ($turns | where ts >= $start and ts < $end)
 
   if ($today | is-empty) {
@@ -89,7 +90,7 @@ export def day [
   ignored: list<string>
   excerpt_chars: int
 ]: nothing -> record {
-  let end = ($start + 1day)
+  let end = ($start | next-day)
   let today = ($credited | where ts >= $start and ts < $end)
   let later = ($continuations | where ts >= $start and ts < $end)
   let runs = (
@@ -98,7 +99,7 @@ export def day [
     | where {|unit| $unit.unit not-in $prompt_units }
     | each {|unit|
       let session = ($sessions | where transcript == $unit.unit | first)
-      agent-run $cfg $start $session $unit.turns $repos $ignored $excerpt_chars
+      agent-run $cfg $start $end $session $unit.turns $repos $ignored $excerpt_chars
     }
     | compact
     | sort-by at

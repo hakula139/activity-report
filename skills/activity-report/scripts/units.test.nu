@@ -44,7 +44,7 @@ def "test Claude subagents, forks, and teammates credit the prompt whose turn st
     (claude-user $app "10:01" "task" {isSidechain: true})
     ...(claude-active $app ["10:03"])
     (claude-user $app "10:15" "relay" {isSidechain: true, isMeta: true, origin: {kind: "human"}})
-    (claude-tool $app "10:21" "Edit" {
+    ...(claude-write $app "10:21" "Edit" {
       file_path: ($lib | path join "parser.nu")
       old_string: "a"
       new_string: "b"
@@ -52,7 +52,7 @@ def "test Claude subagents, forks, and teammates credit the prompt whose turn st
     })
     (claude-tool $app "10:22" "SubagentHandback" {})
     (claude-user $app "10:26" "continue" {isSidechain: true})
-    (claude-tool $app "10:27" "Write" {file_path: ($docs | path join "README.md"), content: "x"})
+    ...(claude-write $app "10:27" "Write" {file_path: ($docs | path join "README.md"), content: "x"})
     (claude-tool $app "10:28" "SubagentHandback" {})
   ]
   claude-subagent $dir "app" $lead "f" {
@@ -62,13 +62,13 @@ def "test Claude subagents, forks, and teammates credit the prompt whose turn st
     spawnDepth: 2
   } [
     (claude-user $app "10:21" "fork" {isSidechain: true})
-    (claude-tool $app "10:21" "Write" {file_path: ($app | path join "src/fork.nu"), content: "x"})
+    ...(claude-write $app "10:21" "Write" {file_path: ($app | path join "src/fork.nu"), content: "x"})
     (claude-tool $app "10:23" "SubagentHandback" {})
   ]
   let teammate = '<teammate-message teammate_id="team-lead">work</teammate-message>'
   transcript $dir ["claude/projects/app/99999999-0000-4000-8000-000000000001.jsonl"] [
     (claude-user $app "10:05" $teammate {teamName: "session-1a2b3c4d", agentName: "fix"})
-    (claude-tool $app "10:06" "Write" {file_path: ($lib | path join "team.nu"), content: "x"})
+    ...(claude-write $app "10:06" "Write" {file_path: ($lib | path join "team.nu"), content: "x"})
     (claude-reply $app "10:07" "done")
   ]
 
@@ -148,6 +148,7 @@ def "test OMP subagents and advisors credit the prompt that started them" [] {
         arguments: {path: "../lib/y.ts", content: "y", i: ""}
       }
     ])
+    (omp-result "12:03" "w")
     (omp-reply "12:05")
   ]
   transcript $dir ["omp/sessions/app/parent/__advisor.jsonl"] [
@@ -171,20 +172,20 @@ def "test writes from each tool credit the repositories of their prompts" [] {
   mkdir ($app | path join "src")
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt $app "10:00" "ship the parser")
-    (claude-tool $app "10:01" "Edit" {
+    ...(claude-write $app "10:01" "Edit" {
       file_path: ($app | path join "src/a.nu")
       old_string: "a"
       new_string: "b"
       replace_all: false
     })
-    (claude-tool $app "10:02" "Edit" {
+    ...(claude-write $app "10:02" "Edit" {
       file_path: ($app | path join "src/a.nu")
       old_string: "b"
       new_string: "c"
       replace_all: false
     })
-    (claude-tool $app "10:03" "Write" {file_path: ($lib | path join "b.nu"), content: "b"})
-    (claude-tool $app "10:04" "NotebookEdit" {
+    ...(claude-write $app "10:03" "Write" {file_path: ($lib | path join "b.nu"), content: "b"})
+    ...(claude-write $app "10:04" "NotebookEdit" {
       notebook_path: ($lib | path join "n.ipynb")
       cell_id: "cell"
       new_source: "x"
@@ -233,6 +234,7 @@ def "test writes from each tool credit the repositories of their prompts" [] {
         }
       }
     ])
+    ...(["w" "e" "p"] | each {|id| omp-result "12:02" $id })
   ]
 
   let cases = [

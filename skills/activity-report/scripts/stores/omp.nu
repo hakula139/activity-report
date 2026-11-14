@@ -32,6 +32,18 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
   read-sessions $cfg $since "omp" ["sessions/**/*.jsonl"] {|records, file|
     let meta = ($records | where type == "session" | first)
     let cwd = $meta.cwd
+    let succeeded = (
+      $records
+      | where {|r|
+        (
+          $r.type == "message"
+          and $r.message.role? == "toolResult"
+          and $r.message.isError? == false
+        )
+      }
+      | get -o message.toolCallId
+      | compact
+    )
     let events = (
       $records
       | each {|r|
@@ -45,16 +57,6 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
             {kind: $kind, ts: $r.timestamp, text: ($m.content | content-text)}
           } else if $m.role == "assistant" and $m.stopReason? == "stop" {
             {kind: "reply", ts: $r.timestamp, text: ($m.content | content-text)}
-          } else if $m.role == "assistant" {
-            let paths = (
-              $m.content
-              | where {|part| $part.type? == "toolCall" and $part.name in ["write" "edit"] }
-              | each {|part| call-paths $cwd $part }
-              | flatten
-            )
-            if ($paths | is-not-empty) {
-              {kind: "write", ts: $r.timestamp, paths: $paths}
-            }
           }
         }
 
@@ -62,7 +64,33 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
           {kind: "model", ts: $r.timestamp}
         }
 
-        [$event $model]
+        let write = if (
+          $r.type == "message"
+          and $r.message.role? == "assistant"
+          and ($r.message.content | describe --detailed | get type) == "list"
+        ) {
+          let paths = (
+            $r.message.content
+            | where {|part|
+              (
+                $part.type? == "toolCall"
+                and $part.name? in ["write" "edit"]
+                and $part.id? in $succeeded
+              )
+            }
+            | each {|part| call-paths $cwd $part }
+            | flatten
+          )
+          if ($paths | is-not-empty) {
+            {
+              kind: "write"
+              ts: $r.timestamp
+              paths: $paths
+            }
+          }
+        }
+
+        [$event $model $write]
       }
       | flatten
       | compact

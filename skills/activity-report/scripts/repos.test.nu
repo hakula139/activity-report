@@ -82,7 +82,7 @@ def "test repositories resolve subdirectories and worktrees, and missing paths r
   for c in $cases {
     transcript $dir ["claude/projects" $c.name $"($c.name).jsonl"] [
       (claude-prompt $c.cwd $c.clock "write it")
-      (claude-tool $c.cwd $c.clock "Write" {file_path: $c.file, content: "x"})
+      ...(claude-write $c.cwd $c.clock "Write" {file_path: $c.file, content: "x"})
     ]
   }
 
@@ -104,7 +104,7 @@ def "test a symlink outside a repository credits the repository it points into" 
   ^ln -s ($lib | path join "src") ($dir | path join "elsewhere/mem")
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt $app "10:00" "write to the linked tree")
-    (claude-tool $app "10:01" "Write" {
+    ...(claude-write $app "10:01" "Write" {
       file_path: ($dir | path join "elsewhere/mem/a.nu")
       content: "x"
     })
@@ -132,21 +132,21 @@ def "test writes to git-ignored paths never count" [] {
   )
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt $app "10:00" "write files")
-    (claude-tool $app "10:01" "Write" {file_path: ($app | path join "src/a.nu"), content: "x"})
-    (claude-tool $app "10:02" "Write" {
+    ...(claude-write $app "10:01" "Write" {file_path: ($app | path join "src/a.nu"), content: "x"})
+    ...(claude-write $app "10:02" "Write" {
       file_path: ($app | path join ".claude/agent-memory-local/gone/src/b.nu")
       content: "x"
     })
-    (claude-tool $app "10:03" "Write" {
+    ...(claude-write $app "10:03" "Write" {
       file_path: ($lib | path join ".claude/agent-memory-local/r/m.md")
       content: "x"
     })
-    (claude-tool $app "10:03" "Write" {
+    ...(claude-write $app "10:03" "Write" {
       file_path: ($lib | path join ".claude/agent-memory-local/r/周报.md")
       content: "x"
     })
-    (claude-tool $app "10:04" "Write" {file_path: ($lib | path join "README.md"), content: "x"})
-    (claude-tool $app "10:05" "Write" {
+    ...(claude-write $app "10:04" "Write" {file_path: ($lib | path join "README.md"), content: "x"})
+    ...(claude-write $app "10:05" "Write" {
       file_path: ($live | path join ".claude/agent-memory-local/gone/c.md")
       content: "x"
     })
@@ -166,12 +166,12 @@ def "test a checkout behind a symlinked parent keeps its writes except ignored o
   let linked = ($dir | path join "lnk/app")
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt $linked "10:00" "ship it")
-    (claude-tool $linked "10:01" "Write" {
+    ...(claude-write $linked "10:01" "Write" {
       file_path: ($linked | path join "src/a.nu")
       content: "x"
     })
     (claude-prompt $linked "10:05" "then the removed directory")
-    (claude-tool $linked "10:06" "Write" {
+    ...(claude-write $linked "10:06" "Write" {
       file_path: ($linked | path join ".claude/agent-memory-local/gone/b.nu")
       content: "x"
     })
@@ -193,11 +193,11 @@ def "test sessions report their repository, and the digest lists labels and repo
   mkdir ($dir | path join "scratch")
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt $app "10:00" "ship")
-    (claude-tool $app "10:01" "Write" {file_path: ($app | path join "src/a.nu"), content: "x"})
+    ...(claude-write $app "10:01" "Write" {file_path: ($app | path join "src/a.nu"), content: "x"})
   ]
   transcript $dir ["claude/projects/cfg/b.jsonl"] [
     (claude-prompt $cfg "11:00" "tidy")
-    (claude-tool $cfg "11:01" "Write" {file_path: ($cfg | path join "README.md"), content: "x"})
+    ...(claude-write $cfg "11:01" "Write" {file_path: ($cfg | path join "README.md"), content: "x"})
   ]
   transcript $dir ["claude/projects/scratch/c.jsonl"] [
     (claude-prompt ($dir | path join "scratch") "12:00" "file")

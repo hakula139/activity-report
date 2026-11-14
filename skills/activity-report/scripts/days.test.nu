@@ -86,7 +86,7 @@ def "test a day keeps its final replies past midnight until the next prompt" [] 
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt "/work/app" "10:00" "start")
     (claude-reply "/work/app" "10:05" "working")
-    (claude-tool "/work/app" "10:06" "Edit" {
+    ...(claude-write "/work/app" "10:06" "Edit" {
       file_path: "/work/app/a.nu"
       old_string: "a"
       new_string: "b"
@@ -121,10 +121,10 @@ def "test a delegate turn on a later day continues its prompt there" [] {
   ]
   claude-subagent $dir "app" $lead "a" {agentType: "implementer", toolUseId: "t", spawnDepth: 1} [
     (claude-user $app "22:30" "task" {isSidechain: true})
-    (claude-tool $app "23:00" "Write" {file_path: ($app | path join "src/x.nu"), content: "x"})
+    ...(claude-write $app "23:00" "Write" {file_path: ($app | path join "src/x.nu"), content: "x"})
     (claude-tool $app "23:00" "SubagentHandback" {})
     (claude-user $app "2026-10-16T00:10" "continue" {isSidechain: true})
-    (claude-tool $app "2026-10-16T00:40" "Write" {
+    ...(claude-write $app "2026-10-16T00:40" "Write" {
       file_path: ($lib | path join "y.nu")
       content: "y"
     })
@@ -192,7 +192,7 @@ def "test a continuation that wrote nothing takes the prompt repositories" [] {
   ]
   claude-subagent $dir "app" $lead "a" {agentType: "implementer", toolUseId: "t", spawnDepth: 1} [
     (claude-user $app "22:30" "task" {isSidechain: true})
-    (claude-tool $app "23:00" "Write" {file_path: ($app | path join "src/x.nu"), content: "x"})
+    ...(claude-write $app "23:00" "Write" {file_path: ($app | path join "src/x.nu"), content: "x"})
     (claude-tool $app "23:00" "SubagentHandback" {})
     (claude-user $app "2026-10-16T00:10" "continue" {isSidechain: true})
     (claude-reply $app "2026-10-16T00:40" "done")
@@ -216,7 +216,7 @@ def "test a continuation-only day lists the lead session without prompts" [] {
   ]
   claude-subagent $dir "app" $lead "a" {agentType: "implementer", toolUseId: "t", spawnDepth: 1} [
     (claude-user $app "2026-10-16T00:10" "continue" {isSidechain: true})
-    (claude-tool $app "2026-10-16T00:40" "Write" {
+    ...(claude-write $app "2026-10-16T00:40" "Write" {
       file_path: ($lib | path join "y.nu")
       content: "y"
     })
@@ -233,6 +233,133 @@ def "test a continuation-only day lists the lead session without prompts" [] {
     {from: "2026-10-15 22:00", text: "P", agent: 0.6667, repos: {lib: 1.0}}
   ]
   assert equal ($output.repositories | columns | sort) ["app" "lib"]
+}
+
+def "test an old recursive ancestor still owns a recent continuation" [] {
+  let dir = (mktemp --directory)
+  transcript $dir ["omp/sessions/app/lead.jsonl"] [
+    {
+      type: "session"
+      id: "lead"
+      cwd: "/work/app"
+    }
+    (omp-user "22:00" "original task")
+    (omp-reply "22:10")
+  ]
+  transcript $dir ["omp/sessions/app/lead/middle.jsonl"] [
+    {
+      type: "session"
+      id: "middle"
+      cwd: "/work/app"
+    }
+    (omp-user "23:00" "delegated task" --agent)
+    (omp-reply "23:10")
+  ]
+  transcript $dir ["omp/sessions/app/lead/middle/leaf.jsonl"] [
+    {
+      type: "session"
+      id: "leaf"
+      cwd: "/work/app"
+    }
+    (omp-user "2026-10-16T00:10" "continue" --agent)
+    (omp-reply "2026-10-16T00:40")
+  ]
+  for file in ["lead.jsonl" "lead/middle.jsonl"] {
+    with-env {TZ: "UTC"} {
+      ^touch -t 202601010000 ($dir | path join "omp/sessions/app" $file)
+    }
+  }
+  with-env {TZ: "UTC"} {
+    ^touch -t 202610160100 ($dir | path join "omp/sessions/app/lead/middle/leaf.jsonl")
+  }
+
+  let output = (digest-output $dir --from "2026-10-16" --to "2026-10-16")
+
+  assert equal ($output.days | each {|day|
+    {
+      date: $day.date
+      sessions: ($day.sessions | select session prompts replies continued)
+      runs: $day.runs
+    }
+  }) [{
+    date: "2026-10-16"
+    sessions: [{
+      session: "lead"
+      prompts: []
+      replies: []
+      continued: [{
+        from: "2026-10-15 22:00"
+        text: "original task"
+        agent: 0.5
+        repos: {}
+      }]
+    }]
+    runs: []
+  }]
+}
+
+def "test DST days own midnight sides and repeated local clocks" [] {
+  let timezone = ($env.TZDIR? | default "/usr/share/zoneinfo" | path join "America/New_York")
+  let cases = [
+    {
+      from: "2026-03-07"
+      to: "2026-03-09"
+      clocks: ["2026-03-08T04:58" "2026-03-08T05:00" "2026-03-09T03:58" "2026-03-09T04:00"]
+      dates: ["2026-03-07" "2026-03-08" "2026-03-08" "2026-03-09"]
+      local: ["23:58" "00:00" "23:58" "00:00"]
+    }
+    {
+      from: "2026-10-31"
+      to: "2026-11-02"
+      clocks: [
+        "2026-11-01T03:58" "2026-11-01T04:00" "2026-11-01T05:30"
+        "2026-11-01T06:30" "2026-11-02T04:58" "2026-11-02T05:00"
+      ]
+      dates: ["2026-10-31" "2026-11-01" "2026-11-01" "2026-11-01" "2026-11-01" "2026-11-02"]
+      local: ["23:58" "00:00" "01:30" "01:30" "23:58" "00:00"]
+    }
+  ]
+  for c in $cases {
+    let dir = (mktemp --directory)
+    for clock in ($c.clocks | enumerate) {
+      let reply = (at $clock.item | into datetime | $in + 1min)
+      transcript $dir ["claude/projects/app" $"($clock.index).jsonl"] [
+        (claude-prompt "/work/app" $clock.item $"task ($clock.index)")
+        (claude-reply "/work/app" $clock.item
+          | update timestamp ($reply | format date "%Y-%m-%dT%H:%M:%SZ"))
+      ]
+    }
+
+    let output = (digest-output $dir {hours: {reading_minutes: 0}}
+      --from $c.from
+      --to $c.to
+      --tz $timezone
+    )
+
+    let actual = ($output.days | each {|day|
+      $day.sessions | each {|session|
+        $session.prompts | each {|prompt|
+          {
+            date: $day.date
+            at: $prompt.at
+            text: $prompt.text
+            hours: $prompt.hours
+            agent: $prompt.agent
+          }
+        }
+      } | flatten
+    } | flatten)
+    let expected = ($c.clocks | enumerate | each {|clock|
+      {
+        date: ($c.dates | get $clock.index)
+        at: ($c.local | get $clock.index)
+        text: $"task ($clock.index)"
+        hours: 0.0167
+        agent: 0.0167
+      }
+    })
+    assert equal $actual $expected $c.from
+  }
 }
 
 def "test a local command on a later day leaves no continuation" [] {

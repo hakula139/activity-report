@@ -95,6 +95,8 @@ my-project = ["personal"]
 
 Assistant directories must be absolute or start with `~`, which expands without resolving symlinks. Set `assistants.claude` or `assistants.codex` in TOML to override its environment-derived default.
 
+All `hours` values must be integers. `reading_minutes` allows zero, and the other values must be positive.
+
 ## Usage
 
 Running `activity-report` without a subcommand prints the command help. An unknown subcommand exits with an error and points to `--help`.

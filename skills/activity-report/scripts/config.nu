@@ -110,6 +110,13 @@ def validate [config: record, schema: record, prefix: string, file: string]: not
     } else if $expected == "list" {
       check-strings $value $path $file
     }
+
+    if $prefix == "hours" {
+      let minimum = if $key == "reading_minutes" { 0 } else { 1 }
+      if $value < $minimum {
+        error make {msg: $"Config key `($path)` must be at least ($minimum) in `($file)`"}
+      }
+    }
   }
 }
 

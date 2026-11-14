@@ -4,6 +4,7 @@
 # Units, their repository shares and agent time, human credit, and continuations.
 # ==================================================================================================
 
+use ./lib/dates.nu [day-start next-day]
 use ./lib/text.nu [excerpt]
 use ./repos.nu [shares]
 
@@ -134,10 +135,11 @@ export def credit-prompts [cfg: record, units: record]: list -> list<record> {
       ($timeline | get -o ($p.index + 1) | get -o ts)
     ]
     let hours = ((($until | compact | math min) - $p.item.ts) / 1hr)
-    let day = ($p.item.ts | format date "%Y-%m-%d" | into datetime)
+    let day = ($p.item.ts | day-start)
+    let end = ($day | next-day)
     let agent = (
       ($units | get $p.item.unit)
-      | where ts >= $day and ts < ($day + 1day)
+      | where ts >= $day and ts < $end
       | agent-hours $cfg
     )
     $p.item
@@ -162,11 +164,11 @@ export def continuations [
 ]: list -> list<record> {
   $in
   | each {|p|
-    let since = ($p.ts | format date "%Y-%m-%d" | into datetime)
+    let since = ($p.ts | next-day)
 
     $units
     | get $p.unit
-    | where ts >= ($since + 1day)
+    | where ts >= $since
     | group-by {|t| $t.ts | format date "%Y-%m-%d" }
     | values
     | each {|turns|
@@ -178,7 +180,7 @@ export def continuations [
       )
       {
         transcript: $p.transcript
-        ts: ($turns.0.ts | format date "%Y-%m-%d" | into datetime)
+        ts: ($turns.0.ts | day-start)
         from: ($p.ts | format date "%Y-%m-%d %H:%M")
         text: ($p.text | excerpt $excerpt_chars)
         agent: ($turns | agent-hours $cfg)

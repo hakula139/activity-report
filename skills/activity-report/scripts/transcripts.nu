@@ -4,6 +4,7 @@
 # Reading transcripts, idle pauses, and the event-to-turn projection.
 # ==================================================================================================
 
+use ./lib/dates.nu [local-time]
 use ./repos.nu [physical]
 
 # A transcript may end in a partial line while its session is still being written.
@@ -91,10 +92,58 @@ def turns []: list -> list {
   | reverse
 }
 
-# Read the tool's transcripts that match the globs and changed since the date as sessions. The
-# parser maps a transcript's records and file to `id`, `cwd`, `attended`, `parent`, and `events`,
-# or to null to skip it. A turn's span stops at its last record before a gap longer than
-# `hours.agent_idle_minutes`, or at its next start. Only attended sessions earn human hours.
+def read-session [cfg: record, tool: string, parse: closure, file: string]: nothing -> any {
+  let records = (read-transcript $file)
+  let session = (do $parse $records $file)
+
+  if $session == null {
+    return null
+  }
+
+  let gap = ($cfg.hours.agent_idle_minutes * 1min)
+  let pauses = (
+    $records
+    | get -o timestamp
+    | compact
+    | into datetime
+    | sort
+    | window 2
+    | where {|w| ($w.1 - $w.0) > $gap }
+    | each {|w|
+      {
+        kind: "pause"
+        ts: $w.0
+      }
+    }
+  )
+  let events = (
+    $session.events
+    | append $pauses
+    | update ts { local-time }
+    | sort-by ts
+    | each {|e|
+      if $e.kind == "write" {
+        $e | update paths { each {|path| physical $path } }
+      } else {
+        $e
+      }
+    }
+  )
+  $session | merge {
+    transcript: $file
+    tool: $tool
+    attended: ($session.attended and ($cfg.excluded_dirs | all {|p| $session.cwd !~ $p }))
+    events: $events
+    turns: ($events | turns)
+  }
+}
+
+def transcript-stem [file: string]: nothing -> string {
+  $file | str replace --regex '\.zst$' ""
+}
+
+# Read recent transcripts and their ancestor closure. The parser maps records and a file to
+# `id`, `cwd`, `attended`, `parent`, and `events`, or null to skip it.
 export def read-sessions [
   cfg: record
   since: datetime
@@ -102,54 +151,50 @@ export def read-sessions [
   globs: list<string>
   parse: closure
 ]: nothing -> list {
-  $globs
-  | each {|pattern| glob ($cfg.assistants | get $tool | path join $pattern) }
-  | flatten
-  | where {|file| (ls $file | get 0.modified) >= $since }
-  | each {|file| {file: $file, stem: ($file | str replace --regex '\.zst$' "")} }
-  | uniq-by stem
-  | get file
-  | par-each --keep-order {|file|
-    let records = (read-transcript $file)
-    let session = (do $parse $records $file)
+  let files = (
+    $globs
+    | each {|pattern| glob ($cfg.assistants | get $tool | path join $pattern) }
+    | flatten
+    | each {|file|
+      {
+        file: $file
+        stem: (transcript-stem $file)
+        modified: (ls $file | get 0.modified)
+      }
+    }
+  )
+  mut pending = ($files | where modified >= $since | uniq-by stem | get file)
+  mut seen = []
+  mut sessions = []
 
-    if $session == null {
+  while ($pending | is-not-empty) {
+    $seen = ($seen ++ ($pending | each {|file| transcript-stem $file }))
+    let loaded = (
+      $pending
+      | par-each --keep-order {|file| read-session $cfg $tool $parse $file }
+      | compact
+    )
+    $sessions = ($sessions ++ $loaded)
+    $pending = (
+      $loaded
+      | get -o parent
+      | compact
+      | each {|file| transcript-stem $file }
+      | uniq
+      | where {|stem| $stem not-in $seen }
+      | each {|stem| $files | where stem == $stem | get -o 0.file }
+      | compact
+    )
+  }
+
+  let loaded = $sessions
+  $loaded | update parent {
+    let parent = $in
+    if $parent == null {
       null
     } else {
-      let gap = ($cfg.hours.agent_idle_minutes * 1min)
-      let pauses = (
-        $records
-        | get -o timestamp
-        | compact
-        | into datetime
-        | sort
-        | window 2
-        | where {|w| ($w.1 - $w.0) > $gap }
-        | each {|w| {kind: "pause", ts: $w.0} }
-      )
-      $session
-      | insert transcript $file
-      | update events { append $pauses }
-    }
-  }
-  | par-each --keep-order {|s|
-    let events = (
-      $s.events
-      | update ts { into datetime | date to-timezone "local" }
-      | sort-by ts
-      | each {|e|
-        if $e.kind == "write" {
-          $e | update paths { each {|path| physical $path } }
-        } else {
-          $e
-        }
-      }
-    )
-    $s | merge {
-      tool: $tool
-      attended: ($s.attended and ($cfg.excluded_dirs | all {|pattern| $s.cwd !~ $pattern }))
-      events: $events
-      turns: ($events | turns)
+      let stem = (transcript-stem $parent)
+      $loaded | where {|s| (transcript-stem $s.transcript) == $stem } | get -o 0.transcript
     }
   }
 }
