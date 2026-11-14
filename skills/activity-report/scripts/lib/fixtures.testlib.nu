@@ -294,11 +294,18 @@ export def digest-output [
   $run.stdout | from json
 }
 
-# Run the digest in UTC, so the fixtures' `Z` timestamps read as local times.
+export def day-entries [index: int = 0]: record -> list<record> {
+  let output = $in
+  $output.days
+  | get $index
+  | get entries
+  | each {|entry| ($output.units | get $entry.unit) | merge ($entry | reject unit) }
+}
+
 export def digest-day [
   dir: string
   overrides: record = {}
   --excerpt-chars: int = 400
-]: nothing -> record {
-  digest-output $dir $overrides --excerpt-chars=$excerpt_chars | get days.0
+]: nothing -> list<record> {
+  digest-output $dir $overrides --excerpt-chars=$excerpt_chars | day-entries
 }

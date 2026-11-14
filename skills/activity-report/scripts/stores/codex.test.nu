@@ -85,7 +85,7 @@ def "test Codex request headings are stripped from prompts" [] {
   codex-transcript $dir {id: "request", cwd: "/work/app", thread_source: "user"} $records
 
   let day = (digest-day $dir --excerpt-chars 0)
-  let prompts = ($day.sessions.0.prompts | get text)
+  let prompts = ($day | get text)
 
   for c in ($cases | enumerate) {
     assert equal ($prompts | get $c.index) $c.item.expected $c.item.name
@@ -113,8 +113,8 @@ def "test a Codex subagent finds its parent in archived sessions" [] {
 
     let day = (digest-day $dir)
 
-    assert equal $day.sessions.0.prompts.0.agent 0.2328 $form
-    assert equal $day.runs [] $form
+    assert equal $day.0.agent 0.2328 $form
+    assert equal ($day | where kind == "run") [] $form
   }
 }
 
@@ -128,8 +128,8 @@ def "test both forms of an archived Codex session read once" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions | length) 1
-  assert equal $day.sessions.0.prompts.0.agent 0.1664
+  assert equal (($day | where kind == "prompt") | length) 1
+  assert equal $day.0.agent 0.1664
 }
 
 def "test a Codex turn starts at its prompt" [] {
@@ -141,6 +141,6 @@ def "test a Codex turn starts at its prompt" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.runs []
-  assert equal $day.sessions.0.prompts.0.agent 0.1664
+  assert equal ($day | where kind == "run") []
+  assert equal $day.0.agent 0.1664
 }

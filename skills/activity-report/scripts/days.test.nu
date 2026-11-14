@@ -59,8 +59,8 @@ def "test turns no prompt started become runs" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions []
-  assert equal ($day.runs | select tool repo agent text) $cases
+  assert equal ($day | where kind == "prompt") []
+  assert equal (($day | where kind == "run") | select tool repo agent text) $cases
 }
 
 def "test agent time belongs to the day its turn started" [] {
@@ -78,7 +78,7 @@ def "test agent time belongs to the day its turn started" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.runs.0.agent 2.0
+  assert equal ($day | where kind == "run" | first).agent 2.0
 }
 
 def "test a day keeps its final replies past midnight until the next prompt" [] {
@@ -97,9 +97,10 @@ def "test a day keeps its final replies past midnight until the next prompt" [] 
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions.0.replies | select at text) [
-    {at: "10:12", text: "started"}
-    {at: "00:30", text: "merged"}
+  assert equal ($day | get replies | flatten | select at text) [
+    {at: "2026-10-15T10:05:00+00:00", text: "working"}
+    {at: "2026-10-15T10:12:00+00:00", text: "started"}
+    {at: "2026-10-16T00:30:00+00:00", text: "merged"}
   ]
 }
 
@@ -123,13 +124,13 @@ def "test a delegate turn on a later day continues its prompt there" [] {
   ]
 
   let output = (digest-output $dir --to "2026-10-16")
-  let first = ($output.days | where date == $DAY | get 0)
-  let second = ($output.days | where date == "2026-10-16" | get 0)
+  let first = ($output | day-entries)
+  let second = ($output | day-entries 1)
 
-  assert equal $first.sessions.0.prompts.0.agent 0.8333
-  assert equal $second.sessions.0.prompts.0.agent 0.5
-  assert equal $second.sessions.0.continued [
-    {from: "2026-10-15 22:00", text: "P", agent: 0.6667}
+  assert equal $first.0.agent 0.8333
+  assert equal $second.1.agent 0.5
+  assert equal ($second | where hours == 0 | select from text agent) [
+    {from: "2026-10-15T22:00:00+00:00", text: "P", agent: 0.6667}
   ]
 }
 
@@ -148,9 +149,9 @@ def "test a continuation books its turn on the local day" [] {
 
   let output = (digest-output $dir --to "2026-10-16" --tz "CST-8")
 
-  assert equal $output.days.0.sessions.0.prompts.0.agent 0.5
-  assert equal $output.days.1.sessions.0.continued [
-    {from: "2026-10-15 18:00", text: "P", agent: 0.5}
+  assert equal ($output | day-entries | first | get agent) 0.5
+  assert equal ($output | day-entries 1 | select from text agent) [
+    {from: "2026-10-15T18:00:00+08:00", text: "P", agent: 0.5}
   ]
 }
 
@@ -169,10 +170,10 @@ def "test a continuation text is excerpted" [] {
 
   let output = (digest-output $dir --to "2026-10-16" --excerpt-chars 6)
 
-  assert equal ($output.days.1.sessions.0.continued | get text) ["a long..."]
+  assert equal (($output | day-entries 1 | select from text agent) | get text) ["a long..."]
 }
 
-def "test a continuation-only day lists the lead session without prompts" [] {
+def "test a continuation-only day reuses the older prompt and its evidence" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
   let lead = "aaaabbbb-0000-4000-8000-000000000004"
@@ -188,13 +189,13 @@ def "test a continuation-only day lists the lead session without prompts" [] {
 
   let output = (digest-output $dir --from "2026-10-16" --to "2026-10-16")
 
-  assert equal ($output.days.0.sessions | length) 1
-  assert equal $output.days.0.sessions.0.session $lead
-  assert equal $output.days.0.sessions.0.prompts []
-  assert equal $output.days.0.sessions.0.replies []
-  assert equal $output.days.0.sessions.0.continued [
-    {from: "2026-10-15 22:00", text: "P", agent: 0.6667}
-  ]
+  assert equal $output.days.0.entries [{unit: 0, hours: 0, agent: 0.6667}]
+  assert equal ($output.units | select session from text replies) [{
+    session: $lead
+    from: "2026-10-15T22:00:00+00:00"
+    text: "P"
+    replies: [{at: "2026-10-15T22:20:00+00:00", text: "first"}]
+  }]
   assert equal $output.repositories {app: $app}
 }
 
@@ -238,25 +239,21 @@ def "test an old recursive ancestor still owns a recent continuation" [] {
 
   let output = (digest-output $dir --from "2026-10-16" --to "2026-10-16")
 
-  assert equal ($output.days | each {|day|
-    {
-      date: $day.date
-      sessions: ($day.sessions | select session prompts replies continued)
-      runs: $day.runs
-    }
-  }) [{
+  assert equal $output.days [{
     date: "2026-10-16"
-    sessions: [{
-      session: "lead"
-      prompts: []
-      replies: []
-      continued: [{
-        from: "2026-10-15 22:00"
-        text: "original task"
-        agent: 0.5
-      }]
-    }]
-    runs: []
+    weekday: "Fri"
+    entries: [{unit: 0, hours: 0, agent: 0.5}]
+  }]
+  assert equal $output.units [{
+    kind: "prompt"
+    tool: "omp"
+    session: "lead"
+    cwd: "/work/app"
+    repo: null
+    from: "2026-10-15T22:00:00+00:00"
+    text: "original task"
+    replies: [{at: "2026-10-15T22:10:00+00:00", text: "done"}]
+    sources: [{tool: "omp", session: "leaf", cwd: "/work/app", repo: null}]
   }]
 }
 
@@ -298,18 +295,16 @@ def "test DST days own midnight sides and repeated local clocks" [] {
       --tz $timezone
     )
 
-    let actual = ($output.days | each {|day|
-      $day.sessions | each {|session|
-        $session.prompts | each {|prompt|
-          {
-            date: $day.date
-            at: $prompt.at
-            text: $prompt.text
-            hours: $prompt.hours
-            agent: $prompt.agent
-          }
+    let actual = ($output.days | enumerate | each {|day|
+      $output | day-entries $day.index | each {|unit|
+        {
+          date: $day.item.date
+          at: ($unit.from | into datetime | format date "%H:%M")
+          text: $unit.text
+          hours: $unit.hours
+          agent: $unit.agent
         }
-      } | flatten
+      }
     } | flatten)
     let expected = ($c.clocks | enumerate | each {|clock|
       {
@@ -338,8 +333,7 @@ def "test a local command on a later day leaves no continuation" [] {
 
   let output = (digest-output $dir --to "2026-10-16")
 
-  assert equal $output.days.1.sessions []
-  assert equal $output.days.1.runs []
+  assert equal $output.days.1.entries []
 }
 
 def "test a local command before more conversation leaves no continuation" [] {
@@ -362,8 +356,44 @@ def "test a local command before more conversation leaves no continuation" [] {
 
     let output = (digest-output $dir --to "2026-10-16")
 
-    assert equal $output.days.1.sessions.0.continued [] $"($c.command) leaves no continuation"
-    assert equal $output.days.1.sessions.0.prompts.0.agent $c.agent $"Q at ($c.prompt)"
-    assert equal $output.days.1.runs [] $"($c.command) leaves no run"
+    assert equal ($output | day-entries 1 | select text agent) [{text: "Q", agent: $c.agent}] $c.command
   }
+}
+
+def "test run evidence keeps in-range intervals and their final replies" [] {
+  let dir = (mktemp --directory)
+  transcript $dir ["omp/sessions/app/run.jsonl"] [
+    {type: "session", id: "run", cwd: "/work/app"}
+    (omp-user "2026-10-14T09:00" "old task" --agent)
+    (omp-reply "2026-10-14T09:10" "old result")
+    (omp-user "10:00" "first task" --agent)
+    (omp-reply "10:05" "interim")
+    (omp-reply "10:10" "first result")
+    (omp-user "23:50" "second task" --agent)
+    (omp-reply "2026-10-16T00:10" "second result")
+    (omp-user "2026-10-16T01:00" "future task" --agent)
+    (omp-reply "2026-10-16T01:10" "future result")
+  ]
+
+  let output = (digest-output $dir)
+
+  assert equal $output.units [{
+    kind: "run"
+    tool: "omp"
+    session: "run"
+    cwd: "/work/app"
+    repo: null
+    from: "2026-10-15T10:00:00+00:00"
+    text: "first task"
+    replies: [
+      {at: "2026-10-15T10:10:00+00:00", text: "first result"}
+      {at: "2026-10-16T00:10:00+00:00", text: "second result"}
+    ]
+    sources: []
+  }]
+  assert equal $output.days [{
+    date: $DAY
+    weekday: "Thu"
+    entries: [{unit: 0, hours: 0, agent: 0.4167}]
+  }]
 }

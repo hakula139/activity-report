@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Breaking changes
 
+- Replace daily sessions, runs, and continuations with shared units and daily entries. Preserve full local timestamps and contributing-session directories for project attribution.
+
 - Remove file-count repository shares from prompts, continuations, and runs. The reporting skill attributes tasks to projects from conversation and repository evidence.
 
 ## [0.1.0] - 2026-11-14

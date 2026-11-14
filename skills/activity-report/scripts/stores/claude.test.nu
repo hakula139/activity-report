@@ -32,10 +32,11 @@ def "test only prompts a person typed count" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions | each {|s| {tool: $s.tool, prompts: ($s.prompts | get at)} }) [
-    {tool: "claude", prompts: ["10:00" "14:00"]}
-    {tool: "codex", prompts: ["16:00"]}
-    {tool: "omp", prompts: ["18:00"]}
+  assert equal ($day | select tool from) [
+    {tool: "claude", from: "2026-10-15T10:00:00+00:00"}
+    {tool: "claude", from: "2026-10-15T14:00:00+00:00"}
+    {tool: "codex", from: "2026-10-15T16:00:01+00:00"}
+    {tool: "omp", from: "2026-10-15T18:00:00+00:00"}
   ]
 }
 
@@ -50,7 +51,7 @@ def "test an answered question earns a prompt and a timed-out one earns none" []
 
   let day = (digest-day $dir --excerpt-chars 0)
 
-  assert equal ($day.sessions.0.prompts | select text hours agent) [
+  assert equal (($day | where kind == "prompt") | select text hours agent) [
     {
       text: (
         "
@@ -76,7 +77,7 @@ def "test only a record tool result can be a question" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions.0.prompts | select at hours) [{at: "10:00", hours: 0.3333}]
+  assert equal (($day | where kind == "prompt") | select from hours) [{from: "2026-10-15T10:00:00+00:00", hours: 0.3333}]
 }
 
 def "test a renamed lead session keeps its prompts" [] {
@@ -89,10 +90,10 @@ def "test a renamed lead session keeps its prompts" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions | each {|s| $s.prompts | select at hours }) [
-    [{at: "10:00", hours: 0.5}]
+  assert equal ($day | select from hours) [
+    {from: "2026-10-15T10:00:00+00:00", hours: 0.5}
   ]
-  assert equal $day.runs []
+  assert equal ($day | where kind == "run") []
 }
 
 def "test a compaction belongs to the turn it compacted" [] {
@@ -117,14 +118,13 @@ def "test a compaction belongs to the turn it compacted" [] {
   let day = (digest-day $dir)
 
   assert equal (
-    $day.sessions
-    | select session prompts
-    | each {|s| {session: $s.session, agent: $s.prompts.0.agent} }
+    $day
+    | select session agent
     | sort-by session
   ) [
     {session: "a", agent: 0.1667}
     {session: "b", agent: 0.3333}
     {session: "c", agent: 0.1664}
   ]
-  assert equal $day.runs []
+  assert equal ($day | where kind == "run") []
 }

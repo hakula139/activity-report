@@ -44,9 +44,9 @@ def "test repositories resolve subdirectories and worktrees, and missing paths r
   }
 
   let output = (digest-output $dir)
-  let day = $output.days.0
+  let day = ($output | day-entries)
 
-  assert equal ($day.sessions | get repo) ($cases | get repo)
+  assert equal (($day | where kind == "prompt") | get repo) ($cases | get repo)
   assert equal $output.repositories {app: $app}
 }
 
@@ -69,24 +69,26 @@ def "test sessions report their repository, and the digest lists labels and repo
   ]
 
   let output = (digest-output $dir)
-  let day = $output.days.0
+  let day = ($output | day-entries)
 
-  assert equal ($output | reject days) {
+  assert equal ($output | select labels repositories) {
     labels: {default: ["work"], projects: {dotfiles: ["personal"]}}
     repositories: {app: $app, dotfiles: $cfg}
   }
-  assert equal ($day.sessions | select repo cwd) [
+  assert equal (($day | where kind == "prompt") | select repo cwd) [
     {repo: "app", cwd: $app}
     {repo: "dotfiles", cwd: $cfg}
     {repo: null, cwd: ($dir | path join "scratch")}
   ]
-  assert equal ($day.sessions.0 | columns) [
+  assert equal ($output.units.0 | columns) [
+    "kind"
     "tool"
     "session"
     "cwd"
     "repo"
-    "prompts"
+    "from"
+    "text"
     "replies"
-    "continued"
+    "sources"
   ]
 }

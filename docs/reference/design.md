@@ -48,11 +48,10 @@ Each session's `cwd` is resolved to its repository with `git rev-parse`. A linke
 
 ## Days and output
 
-A day covers `[00:00, next 00:00)` in local time and lists:
+A day covers `[00:00, next 00:00)` in local time. Each entry gives a unit index, human credit, and agent time. Units keep their owner, prompt or run text, final owner replies, and contributing sessions once for the range. The same unit can have entries on several days.
 
-- **sessions**: each session with a prompt credited that day or a continuation that day, with its prompts for the day, the final replies from its first prompt that day until its next prompt on a later day, and its continuations. A session listed only through a continuation has no prompts and no replies.
-- **runs**: agent work that no prompt started, with turns started that day.
+Only referenced units are emitted. Prompt evidence includes its original anchor turn and owner turns started in range. Runs use their first in-range start and owner turns in range. A selected turn's reply can follow midnight or the range's end. Each prompt or trigger interval keeps its last reply, while the first reply still determines the turn's end for time estimation.
 
-The top level repeats `labels`, maps each repository name in the output to its root in `repositories`, keeping the first root found when two repositories share a directory name, and holds one entry per date in `days`.
+The top level repeats `labels`, maps each repository in the units and their sources to its root in `repositories`, and holds the `units` and `days` lists. Sources include only other sessions contributing turns in range. Repeated repository directory names keep the first root found.
 
 The field reference lives in `skills/activity-report/references/output.md`, so it changes with the output.

@@ -65,13 +65,15 @@ def "test steering prompts and triggers share the first reply" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions.0.replies [{at: "10:30", text: "done"}]
-  assert equal ($day.sessions.0.prompts | select at text) [
-    {at: "10:00", text: "start"}
-    {at: "10:05", text: "also check tests"}
+  assert equal $day.0.replies []
+  assert equal $day.1.replies [{at: "2026-10-15T10:30:00+00:00", text: "done"}]
+  assert equal ($day | get replies | flatten) [{at: "2026-10-15T10:30:00+00:00", text: "done"}]
+  assert equal (($day | where kind == "prompt") | select from text) [
+    {from: "2026-10-15T10:00:00+00:00", text: "start"}
+    {from: "2026-10-15T10:05:00+00:00", text: "also check tests"}
   ]
-  assert equal ($day.sessions.0.prompts | get hours) [0.0833 0.5833]
-  assert equal ($day.sessions.0.prompts | get agent) [0.0833 0.4167]
+  assert equal (($day | where kind == "prompt") | get hours) [0.0833 0.5833]
+  assert equal (($day | where kind == "prompt") | get agent) [0.0833 0.4167]
 }
 
 def "test a reply-less turn ends at its last model record" [] {
@@ -84,9 +86,9 @@ def "test a reply-less turn ends at its last model record" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions.0.prompts | select at agent) [
-    {at: "10:00", agent: 0.3333}
-    {at: "10:25", agent: 0}
+  assert equal (($day | where kind == "prompt") | select from agent) [
+    {from: "2026-10-15T10:00:00+00:00", agent: 0.3333}
+    {from: "2026-10-15T10:25:00+00:00", agent: 0}
   ]
 }
 
@@ -99,9 +101,9 @@ def "test a turn with no model output earns nothing" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions.0.prompts | select at agent) [
-    {at: "10:00", agent: 0}
-    {at: "10:05", agent: 0}
+  assert equal (($day | where kind == "prompt") | select from agent) [
+    {from: "2026-10-15T10:00:00+00:00", agent: 0}
+    {from: "2026-10-15T10:05:00+00:00", agent: 0}
   ]
 }
 
@@ -121,9 +123,9 @@ def "test canceled Codex turns cannot borrow a later reply" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions.0.prompts.0.hours 0.1667
-  assert equal $day.sessions.0.prompts.0.agent 0.1667
-  assert equal $day.sessions.0.replies [{at: "13:12", text: "final"}]
+  assert equal $day.0.hours 0.1667
+  assert equal $day.0.agent 0.1667
+  assert equal ($day | get replies | flatten) [{at: "2026-10-15T13:12:00+00:00", text: "final"}]
 }
 
 def "test a turn ends at its first long gap" [] {
@@ -136,7 +138,7 @@ def "test a turn ends at its first long gap" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.runs.0.agent 0.1667
+  assert equal ($day | where kind == "run" | first).agent 0.1667
 }
 
 def "test each tool turn ends at its last record before a long gap" [] {
@@ -157,7 +159,7 @@ def "test each tool turn ends at its last record before a long gap" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.runs | select tool agent) [
+  assert equal (($day | where kind == "run") | select tool agent) [
     {tool: "codex", agent: 0.3333}
     {tool: "omp", agent: 0.3333}
   ]
@@ -173,7 +175,7 @@ def "test a gap of exactly the idle threshold keeps the turn span" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.runs.0.agent 1
+  assert equal ($day | where kind == "run" | first).agent 1
 }
 
 def "test a later turn gap does not cut an earlier turn" [] {
@@ -188,7 +190,7 @@ def "test a later turn gap does not cut an earlier turn" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.runs.0.agent 0.3333
+  assert equal ($day | where kind == "run" | first).agent 0.3333
 }
 
 def "test a stalled delegate earns only the time before its gap" [] {
@@ -207,7 +209,7 @@ def "test a stalled delegate earns only the time before its gap" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions.0.prompts.0.agent 0.75
+  assert equal $day.0.agent 0.75
 }
 
 def "test records written out of order keep their time order" [] {
@@ -220,9 +222,9 @@ def "test records written out of order keep their time order" [] {
 
   let day = (digest-day $dir --excerpt-chars 0)
 
-  assert equal ($day.sessions.0.prompts | select at text agent) [
-    {at: "10:00", text: "first", agent: 0.0833}
-    {at: "10:05", text: "second", agent: 0.25}
+  assert equal (($day | where kind == "prompt") | select from text agent) [
+    {from: "2026-10-15T10:00:00+00:00", text: "first", agent: 0.0833}
+    {from: "2026-10-15T10:05:00+00:00", text: "second", agent: 0.25}
   ]
-  assert equal $day.sessions.0.replies [{at: "10:20", text: "done"}]
+  assert equal ($day | get replies | flatten) [{at: "2026-10-15T10:20:00+00:00", text: "done"}]
 }
