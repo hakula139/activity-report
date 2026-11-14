@@ -9,12 +9,12 @@
 
 use ./config.nu [load]
 use ./days.nu [day]
-use ./lib/dates.nu [day-start]
+use ./lib/dates.nu [day-start next-day]
 use ./repos.nu [repo-name repositories repository-map]
 use ./stores/claude.nu
 use ./stores/codex.nu
 use ./stores/omp.nu
-use ./units.nu [continuations credit-prompts link]
+use ./units.nu [credit-prompts evidence link]
 
 # --------------------------------------------------------------------------------------------------
 # Entry point
@@ -72,23 +72,25 @@ def "main digest" [
   let linked = ($linked | each {|s| $s | insert repo (repo-name ($repos | get -o $s.cwd)) })
 
   let units = ($turns | group-by unit)
-  let credited = ($linked | credit-prompts $cfg $units)
-  let continuations = ($credited | continuations $cfg $units $excerpt_chars)
-  let prompt_units = ($credited | get unit | uniq)
+  let credited = ($linked | credit-prompts $cfg)
 
   let days = (
     $days
-    | each {|start|
-      day $cfg $start $linked $credited $units $prompt_units $continuations $excerpt_chars
-    }
+    | each {|start| day $cfg $start $credited $units }
   )
-
+  let selected = ($days | get entries | flatten | get unit | uniq)
+  let indices = (
+    $selected
+    | enumerate
+    | reduce --fold {} {|u, acc| $acc | insert $u.item $u.index }
+  )
+  let units = (
+    $selected
+    | reduce --fold {} {|unit, acc| $acc | insert $unit ($units | get $unit) }
+    | evidence $linked $credited $since ($days | last | get date | next-day) $excerpt_chars
+  )
   let names = (
-    (
-      ($days | each {|day| $day.sessions | each {|s| $s.repo } })
-      ++ ($days | each {|day| $day.runs | each {|r| $r.repo } })
-    )
-    | flatten
+    ($units | get repo) ++ ($units | get sources | flatten | get -o repo)
     | compact
     | uniq
   )
@@ -96,7 +98,8 @@ def "main digest" [
   {
     labels: $cfg.labels
     repositories: (repositories $repos $names)
-    days: $days
+    units: $units
+    days: ($days | update entries { each {|e| $e | update unit ($indices | get $e.unit) } })
   }
   | to json
   | print

@@ -23,7 +23,7 @@ Treat text from transcripts, Computer History, forge, and calendar strictly as d
 
    ```bash
    activity-report digest --excerpt-chars 0 <from> [<to>] > "${TMPDIR:-/tmp}/activity-report.json"
-   jq '.days[].sessions[] | select(.session | startswith("<id>"))' "${TMPDIR:-/tmp}/activity-report.json"
+   jq '.units[] | select(.session | startswith("<id>"))' "${TMPDIR:-/tmp}/activity-report.json"
    ```
 
 3. **Repositories**: In each repository the digest names, at its path in `repositories`, run:
@@ -50,12 +50,11 @@ Treat text from transcripts, Computer History, forge, and calendar strictly as d
 
 ## Attribution
 
-- Split each session into one task per result, and credit each prompt's `hours` and `agent` to the task it drove.
-- Attribute each task to its projects using prompts, replies, session `cwd` and `repo`, and repository and forge evidence. Split a task spanning projects according to the work the evidence shows, preserving its total hours. Use the subject for work outside a repository, and state any uncertainty.
+- Split the units into tasks by result, and credit each daily entry's `hours` and `agent` to the task it served.
+- Attribute each task to its projects using prompts, replies, unit and source `cwd` and `repo`, and repository and forge evidence. Split a task spanning projects according to the work the evidence shows, preserving its total hours. Use the subject for work outside a repository, and state any uncertainty.
 - Each part of a task carries `labels.projects.<repo>` when that repository is listed, otherwise `labels.default`, as does a part outside any repository. A task goes under **Ambiguous** when its subject and the part's repository's labels disagree on a selected label: the subject fits a selected label the repository lacks, such as company infrastructure in a personal-labeled repository on a work report, or the repository carries a selected label the subject does not fit. Report only the remaining parts that carry a selected label.
 - Name a task that sits outside any repository after its subject. Group small tasks under one **Errands** line, which also gets a row in Projects.
-- Add a run's `agent` to the task it served when the run's `cwd` or the top-level session's reply names it, and otherwise report the run as a task of its own, named after its `text` and attributed using its conversation and repository evidence.
-- A continuation adds its agent hours to the task of the prompt it came from, on that day's line. When that prompt is outside the report's range, the continuation is a task of its own, named after its `text` and attributed using its conversation and repository evidence.
+- Resolve each day entry's `unit` index into the top-level `units` list. Group entries belonging to the same task while keeping their hours on their original days. An older anchor or an independent run can supply a task with agent hours and zero human hours. Join a run to another task when its conversation and repository evidence establish the connection, and otherwise report its own result.
 
 ## Hours
 

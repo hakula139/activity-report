@@ -48,12 +48,13 @@ def turns []: list -> list {
   | reverse
   | generate {|event, state: record = {
       reply: null
+      answer: null
       start: null
       cut: null
       model: null
     }|
     match $event.kind {
-      "reply" => {next: ($state | update reply $event.ts)}
+      "reply" => {next: ($state | update reply $event.ts | update answer { default $event })}
 
       "abort" => {next: ($state | update reply null)}
 
@@ -64,11 +65,13 @@ def turns []: list -> list {
       _ => {
         let turn = ($event | merge {
           end: ($state.reply | default $state.model | default $event.ts)
+          reply: $state.answer
           idle: ($state.cut | default $state.start)
         })
         let kept = ($event.kind == "prompt" or $state.model != null)
         let next = {
           reply: $state.reply
+          answer: null
           start: $event.ts
           cut: null
           model: null
@@ -115,11 +118,10 @@ def read-session [cfg: record, tool: string, parse: closure, file: string]: noth
     | update ts { local-time }
     | sort-by ts
   )
-  $session | merge {
+  $session | reject events | merge {
     transcript: $file
     tool: $tool
     attended: ($session.attended and ($cfg.excluded_dirs | all {|p| $session.cwd !~ $p }))
-    events: $events
     turns: ($events | turns)
   }
 }

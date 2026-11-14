@@ -1,10 +1,9 @@
 # ==================================================================================================
 # Activity Report: Units
 # ==================================================================================================
-# Units, their agent time, human credit, and continuations.
+# Units, their agent time, human credit, and evidence.
 # ==================================================================================================
 
-use ./lib/dates.nu [day-start next-day]
 use ./lib/text.nu [excerpt]
 
 # --------------------------------------------------------------------------------------------------
@@ -101,8 +100,8 @@ export def agent-hours [cfg: record]: list<record> -> float {
 # Credit
 # --------------------------------------------------------------------------------------------------
 
-# Each prompt with earned human hours and same-day unit agent time, rounded to 0.0001.
-export def credit-prompts [cfg: record, units: record]: list -> list<record> {
+# Each prompt with earned human hours, rounded to 0.0001.
+export def credit-prompts [cfg: record]: list -> list<record> {
   let timeline = (
     $in
     | where attended
@@ -120,48 +119,69 @@ export def credit-prompts [cfg: record, units: record]: list -> list<record> {
       ($timeline | get -o ($p.index + 1) | get -o ts)
     ]
     let hours = ((($until | compact | math min) - $p.item.ts) / 1hr)
-    let day = ($p.item.ts | day-start)
-    let end = ($day | next-day)
-    let agent = (
-      ($units | get $p.item.unit)
-      | where ts >= $day and ts < $end
-      | agent-hours $cfg
-    )
     $p.item
     | insert hours ($hours | math round --precision 4)
-    | insert agent $agent
   }
 }
 
 # --------------------------------------------------------------------------------------------------
-# Continuations
+# Evidence
 # --------------------------------------------------------------------------------------------------
 
-# Each prompt's unit turns that started after the prompt's day, one entry per later day: the
-# origin's date, time, and text, and that day's agent time.
-export def continuations [
-  cfg: record
-  units: record
+# Text is stored once per unit, including an older prompt that owns recent delegated work.
+export def evidence [
+  sessions: list
+  credited: list
+  since: datetime
+  until: datetime
   excerpt_chars: int
-]: list -> list<record> {
+]: record -> list<record> {
   $in
-  | each {|p|
-    let since = ($p.ts | next-day)
-
-    $units
-    | get $p.unit
-    | where ts >= $since
-    | group-by {|t| $t.ts | format date "%Y-%m-%d" }
-    | values
-    | each {|turns|
-      {
-        transcript: $p.transcript
-        ts: ($turns.0.ts | day-start)
-        from: ($p.ts | format date "%Y-%m-%d %H:%M")
-        text: ($p.text | excerpt $excerpt_chars)
-        agent: ($turns | agent-hours $cfg)
+  | transpose unit turns
+  | each {|unit|
+    let prompt = ($credited | where unit == $unit.unit | first)
+    let owner = ($prompt.transcript? | default $unit.unit)
+    let session = ($sessions | where transcript == $owner | first)
+    let recent = ($unit.turns | where ts >= $since and ts < $until | sort-by ts)
+    let origin = ($prompt | default $recent.0)
+    let text = if $prompt != null {
+      $prompt.text
+    } else {
+      $recent | where text != "" | get -o 0.text | default ""
+    }
+    let turns = (
+      $session.turns
+      | where unit == $unit.unit
+      | where {|t|
+        ($t.ts >= $since and $t.ts < $until) or ($prompt != null and $t.ts == $prompt.ts)
       }
+    )
+    let sources = ($recent | get transcript | uniq | where $it != $owner)
+    {
+      kind: (if $prompt != null { "prompt" } else { "run" })
+      tool: $session.tool
+      session: $session.id
+      cwd: $session.cwd
+      repo: $session.repo
+      from: ($origin.ts | format date "%+")
+      text: ($text | excerpt $excerpt_chars)
+      replies: (
+        $turns
+        | get -o reply
+        | compact
+        | where text != ""
+        | each {|r| {at: ($r.ts | format date "%+"), text: ($r.text | excerpt $excerpt_chars)} }
+      )
+      sources: (
+        $sources
+        | each {|source|
+          $sessions
+          | where transcript == $source
+          | first
+          | select tool id cwd repo
+          | rename tool session cwd repo
+        }
+      )
     }
   }
-  | flatten
 }

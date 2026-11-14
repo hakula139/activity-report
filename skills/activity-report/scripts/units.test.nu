@@ -19,16 +19,17 @@ def "test a prompt queued while a question waits keeps its own unit" [] {
 
   let day = (digest-day $dir --excerpt-chars 0)
 
-  assert equal ($day.sessions.0.prompts | select at agent) [
-    {at: "10:00", agent: 0.05}
-    {at: "10:03", agent: 0.0333}
-    {at: "10:05", agent: 0.25}
+  assert equal (($day | where kind == "prompt") | select from agent) [
+    {from: "2026-10-15T10:00:00+00:00", agent: 0.05}
+    {from: "2026-10-15T10:03:00+00:00", agent: 0.0333}
+    {from: "2026-10-15T10:05:00+00:00", agent: 0.25}
   ]
 }
 
 def "test Claude subagents, forks, and teammates credit the prompt whose turn started them" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
+  let lib = (git-repo $dir "lib")
   mkdir ($app | path join "src")
   let lead = "1a2b3c4d-0000-4000-8000-000000000001"
   transcript $dir ["claude/projects/app" $"($lead).jsonl"] [
@@ -38,7 +39,7 @@ def "test Claude subagents, forks, and teammates credit the prompt whose turn st
     (claude-reply $app "10:25" "second")
   ]
   claude-subagent $dir "app" $lead "a" {agentType: "implementer", toolUseId: "t", spawnDepth: 1} [
-    (claude-user $app "10:01" "task" {isSidechain: true})
+    (claude-user $lib "10:01" "task" {isSidechain: true})
     ...(claude-active $app ["10:03"])
     (claude-user $app "10:15" "relay" {isSidechain: true, isMeta: true, origin: {kind: "human"}})
     ...(claude-active $app ["10:21"])
@@ -66,9 +67,12 @@ def "test Claude subagents, forks, and teammates credit the prompt whose turn st
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions.0.prompts.0.agent 0.5833
-  assert equal $day.sessions.0.prompts.1.agent 0.1167
-  assert equal $day.runs []
+  assert equal $day.0.agent 0.5833
+  assert equal $day.1.agent 0.1167
+  assert equal ($day.0.sources | where cwd == $lib) [
+    {tool: "claude", session: "agent-a", cwd: $lib, repo: "lib"}
+  ]
+  assert equal ($day | where kind == "run") []
 }
 
 def "test Codex subagents and guardian reviews credit the prompt that started them" [] {
@@ -104,8 +108,8 @@ def "test Codex subagents and guardian reviews credit the prompt that started th
 
     let day = (digest-day $dir)
 
-    assert equal $day.sessions.0.prompts.0.agent 0.4828 $form
-    assert equal $day.runs [] $form
+    assert equal $day.0.agent 0.4828 $form
+    assert equal ($day | where kind == "run") [] $form
   }
 }
 
@@ -139,9 +143,9 @@ def "test OMP subagents and advisors credit the prompt that started them" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions.0.prompts.0.agent 0.6167
-  assert equal ($day.sessions | length) 1
-  assert equal $day.runs []
+  assert equal $day.0.agent 0.6167
+  assert equal (($day | where kind == "prompt") | length) 1
+  assert equal ($day | where kind == "run") []
 }
 
 def "test separate prompts and parallel delegates both add agent time" [] {
@@ -172,8 +176,8 @@ def "test separate prompts and parallel delegates both add agent time" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions | where cwd == $app | get 0.prompts.0.agent) 2.8333
-  assert equal ($day.sessions | where cwd == $lib | get 0.prompts.0.agent) 0.5
+  assert equal (($day | where kind == "prompt") | where cwd == $app | get 0.agent) 2.8333
+  assert equal (($day | where kind == "prompt") | where cwd == $lib | get 0.agent) 0.5
 }
 
 def "test an agent turn earns at most the cap" [] {
@@ -186,7 +190,7 @@ def "test an agent turn earns at most the cap" [] {
 
   let day = (digest-day $dir {hours: {agent_max_minutes: 90}})
 
-  assert equal $day.runs.0.agent 1.5
+  assert equal ($day | where kind == "run" | first).agent 1.5
 }
 
 def "test a prompt earns its turn and a reading allowance until the next prompt anywhere" [] {
@@ -209,7 +213,7 @@ def "test a prompt earns its turn and a reading allowance until the next prompt 
 
   let day = (digest-day $dir {hours: {reading_minutes: 12}})
 
-  assert equal ($day.sessions | each { get prompts.hours }) [[1.0 0.3 0.4 0.3] [0.2]]
+  assert equal ($day | get hours) [1.0 0.3 0.4 0.2 0.3]
 }
 
 def "test a prompt is cut by a prompt from another session after midnight" [] {
@@ -225,5 +229,5 @@ def "test a prompt is cut by a prompt from another session after midnight" [] {
 
   let day = (digest-day $dir)
 
-  assert equal ($day.sessions | each { get prompts | get hours }) [[0.5833]]
+  assert equal ($day | get hours) [0.5833]
 }

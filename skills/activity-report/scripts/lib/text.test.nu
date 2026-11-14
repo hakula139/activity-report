@@ -30,7 +30,7 @@ def "test the excerpt length keeps whole text at zero and cuts at a custom limit
   let excerpt = $"first ("" | fill --character "a" --width 394)..."
   let short_excerpt = "first aaaa..."
   let projected = {|day|
-    $day.sessions | each {|s| {prompt: $s.prompts.0.text, reply: $s.replies.0.text} }
+    $day | each {|u| {prompt: $u.text, reply: $u.replies.0.text} }
   }
   assert equal (do $projected $excerpted) [{prompt: $excerpt, reply: $excerpt}]
   assert equal (do $projected $short) [{prompt: $short_excerpt, reply: $short_excerpt}]
