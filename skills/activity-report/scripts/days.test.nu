@@ -170,7 +170,7 @@ def "test a continuation text is excerpted" [] {
 
   let output = (digest-output $dir --to "2026-10-16" --excerpt-chars 6)
 
-  assert equal (($output | day-entries 1 | select from text agent) | get text) ["a long..."]
+  assert equal ($output | day-entries 1 | get text) ["a long..."]
 }
 
 def "test a continuation-only day reuses the older prompt and its evidence" [] {
