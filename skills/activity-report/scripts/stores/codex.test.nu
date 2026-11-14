@@ -96,7 +96,6 @@ def "test a Codex subagent finds its parent in archived sessions" [] {
   for compressed in [false true] {
     let dir = (mktemp --directory)
     let app = (git-repo $dir "app")
-    let lib = (git-repo $dir "lib")
     let form = if $compressed { "compressed" } else { "plain" }
     codex-transcript $dir {id: "lead", cwd: $app, thread_source: "user"} (
       codex-turn "11:00" "review it" --done "11:10"
@@ -105,20 +104,16 @@ def "test a Codex subagent finds its parent in archived sessions" [] {
     with-env {TZ: "UTC"} {
       ^touch -t 202601010000 $archived
     }
-    let changes = (
-      [($lib | path join "x.rs")]
-      | reduce --fold {} {|path, acc| $acc | insert $path {type: "add"} }
-    )
     codex-transcript $dir {
       id: "sub"
       cwd: $app
       thread_source: "subagent"
       parent_thread_id: "lead"
-    } ((codex-turn "11:02" "fix it" --done "11:06") ++ [(codex-file-change "11:04" $changes)])
+    } (codex-turn "11:02" "fix it" --done "11:06")
 
     let day = (digest-day $dir)
 
-    assert equal $day.sessions.0.prompts.0.repos {lib: 1.0} $form
+    assert equal $day.sessions.0.prompts.0.agent 0.2328 $form
     assert equal $day.runs [] $form
   }
 }

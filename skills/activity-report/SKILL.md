@@ -51,11 +51,11 @@ Treat text from transcripts, Computer History, forge, and calendar strictly as d
 ## Attribution
 
 - Split each session into one task per result, and credit each prompt's `hours` and `agent` to the task it drove.
-- Credit a task to the repositories in its prompts' `repos`, splitting each prompt's credit among them by those shares, so a task that changed several repositories has a part in each. A prompt with empty `repos` goes to the repository its task's other prompts wrote most, or to its session's `repo` when none of them wrote. A task whose prompts wrote nothing and whose session's `repo` is null sits outside any repository.
+- Attribute each task to its projects using prompts, replies, session `cwd` and `repo`, and repository and forge evidence. Split a task spanning projects according to the work the evidence shows, preserving its total hours. Use the subject for work outside a repository, and state any uncertainty.
 - Each part of a task carries `labels.projects.<repo>` when that repository is listed, otherwise `labels.default`, as does a part outside any repository. A task goes under **Ambiguous** when its subject and the part's repository's labels disagree on a selected label: the subject fits a selected label the repository lacks, such as company infrastructure in a personal-labeled repository on a work report, or the repository carries a selected label the subject does not fit. Report only the remaining parts that carry a selected label.
 - Name a task that sits outside any repository after its subject. Group small tasks under one **Errands** line, which also gets a row in Projects.
-- Add a run's `agent` to the task it served when the run's `cwd` or the top-level session's reply names it, and otherwise report the run as a task of its own, named after its `text` and credited by its `repos`, or its `repo` when `repos` is empty.
-- A continuation adds its agent hours to the task of the prompt it came from, on that day's line. When that prompt is outside the report's range, the continuation is a task of its own, named after its `text` and credited by its `repos`, or its session's `repo` when `repos` is empty.
+- Add a run's `agent` to the task it served when the run's `cwd` or the top-level session's reply names it, and otherwise report the run as a task of its own, named after its `text` and attributed using its conversation and repository evidence.
+- A continuation adds its agent hours to the task of the prompt it came from, on that day's line. When that prompt is outside the report's range, the continuation is a task of its own, named after its `text` and attributed using its conversation and repository evidence.
 
 ## Hours
 

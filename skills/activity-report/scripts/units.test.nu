@@ -5,7 +5,6 @@
 # ==================================================================================================
 
 use std/assert
-use std-rfc/str
 
 use ./lib/fixtures.testlib.nu *
 
@@ -30,8 +29,6 @@ def "test a prompt queued while a question waits keeps its own unit" [] {
 def "test Claude subagents, forks, and teammates credit the prompt whose turn started them" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
-  let lib = (git-repo $dir "lib")
-  let docs = (git-repo $dir "docs")
   mkdir ($app | path join "src")
   let lead = "1a2b3c4d-0000-4000-8000-000000000001"
   transcript $dir ["claude/projects/app" $"($lead).jsonl"] [
@@ -44,15 +41,10 @@ def "test Claude subagents, forks, and teammates credit the prompt whose turn st
     (claude-user $app "10:01" "task" {isSidechain: true})
     ...(claude-active $app ["10:03"])
     (claude-user $app "10:15" "relay" {isSidechain: true, isMeta: true, origin: {kind: "human"}})
-    ...(claude-write $app "10:21" "Edit" {
-      file_path: ($lib | path join "parser.nu")
-      old_string: "a"
-      new_string: "b"
-      replace_all: false
-    })
+    ...(claude-active $app ["10:21"])
     (claude-tool $app "10:22" "SubagentHandback" {})
     (claude-user $app "10:26" "continue" {isSidechain: true})
-    ...(claude-write $app "10:27" "Write" {file_path: ($docs | path join "README.md"), content: "x"})
+    ...(claude-active $app ["10:27"])
     (claude-tool $app "10:28" "SubagentHandback" {})
   ]
   claude-subagent $dir "app" $lead "f" {
@@ -62,21 +54,19 @@ def "test Claude subagents, forks, and teammates credit the prompt whose turn st
     spawnDepth: 2
   } [
     (claude-user $app "10:21" "fork" {isSidechain: true})
-    ...(claude-write $app "10:21" "Write" {file_path: ($app | path join "src/fork.nu"), content: "x"})
+    ...(claude-active $app ["10:21"])
     (claude-tool $app "10:23" "SubagentHandback" {})
   ]
   let teammate = '<teammate-message teammate_id="team-lead">work</teammate-message>'
   transcript $dir ["claude/projects/app/99999999-0000-4000-8000-000000000001.jsonl"] [
     (claude-user $app "10:05" $teammate {teamName: "session-1a2b3c4d", agentName: "fix"})
-    ...(claude-write $app "10:06" "Write" {file_path: ($lib | path join "team.nu"), content: "x"})
+    ...(claude-active $app ["10:06"])
     (claude-reply $app "10:07" "done")
   ]
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions.0.prompts.0.repos {lib: 0.67, app: 0.33}
   assert equal $day.sessions.0.prompts.0.agent 0.5833
-  assert equal $day.sessions.0.prompts.1.repos {docs: 1.0}
   assert equal $day.sessions.0.prompts.1.agent 0.1167
   assert equal $day.runs []
 }
@@ -85,20 +75,12 @@ def "test Codex subagents and guardian reviews credit the prompt that started th
   for compressed in [false true] {
     let dir = (mktemp --directory)
     let app = (git-repo $dir "app")
-    let lib = (git-repo $dir "lib")
     let form = if $compressed { "compressed" } else { "plain" }
     codex-transcript $dir {id: "lead", cwd: $app, thread_source: "user"} (
       codex-turn "11:00" "review it" --done "11:10"
     ) --compressed=$compressed
-    let changes = (
-      [($lib | path join "x.rs")]
-      | reduce --fold {} {|path, acc| $acc | insert $path {type: "add"} }
-    )
     let spawn = {parent_thread_id: "lead", depth: 1, agent_nickname: "x", agent_role: "y"}
-    let sub_records = (
-      (codex-turn "11:02" "fix it" --done "11:06")
-      ++ [(codex-file-change "11:04" $changes)]
-    )
+    let sub_records = (codex-turn "11:02" "fix it" --done "11:06")
     codex-transcript $dir {
       id: "sub"
       session_id: "lead"
@@ -122,7 +104,6 @@ def "test Codex subagents and guardian reviews credit the prompt that started th
 
     let day = (digest-day $dir)
 
-    assert equal $day.sessions.0.prompts.0.repos {lib: 1.0} $form
     assert equal $day.sessions.0.prompts.0.agent 0.4828 $form
     assert equal $day.runs [] $form
   }
@@ -131,7 +112,6 @@ def "test Codex subagents and guardian reviews credit the prompt that started th
 def "test OMP subagents and advisors credit the prompt that started them" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
-  let lib = (git-repo $dir "lib")
   transcript $dir ["omp/sessions/app/parent.jsonl"] [
     {type: "session", id: "parent", cwd: $app}
     (omp-user "12:00" "review it")
@@ -159,95 +139,9 @@ def "test OMP subagents and advisors credit the prompt that started them" [] {
 
   let day = (digest-day $dir)
 
-  assert equal $day.sessions.0.prompts.0.repos {lib: 1.0}
   assert equal $day.sessions.0.prompts.0.agent 0.6167
   assert equal ($day.sessions | length) 1
   assert equal $day.runs []
-}
-
-def "test writes from each tool credit the repositories of their prompts" [] {
-  let dir = (mktemp --directory)
-  let app = (git-repo $dir "app")
-  let lib = (git-repo $dir "lib")
-  mkdir ($app | path join "src")
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-prompt $app "10:00" "ship the parser")
-    ...(claude-write $app "10:01" "Edit" {
-      file_path: ($app | path join "src/a.nu")
-      old_string: "a"
-      new_string: "b"
-      replace_all: false
-    })
-    ...(claude-write $app "10:02" "Edit" {
-      file_path: ($app | path join "src/a.nu")
-      old_string: "b"
-      new_string: "c"
-      replace_all: false
-    })
-    ...(claude-write $app "10:03" "Write" {file_path: ($lib | path join "b.nu"), content: "b"})
-    ...(claude-write $app "10:04" "NotebookEdit" {
-      notebook_path: ($lib | path join "n.ipynb")
-      cell_id: "cell"
-      new_source: "x"
-    })
-  ]
-  let changes = (
-    [($app | path join "c.rs") ($app | path join "e.rs") ($lib | path join "d.rs")]
-    | reduce --fold {} {|path, acc| $acc | insert $path {type: "add", content: "x"} }
-  )
-  codex-transcript $dir {id: "codex", cwd: $app, thread_source: "user"} (
-    (codex-turn "11:00" "write files") ++ [(codex-file-change "11:01" $changes)]
-  )
-  transcript $dir ["omp/sessions/app/a.jsonl"] [
-    {type: "session", id: "omp", cwd: $app}
-    (omp-user "12:00" "write files")
-    (omp-tool "12:01" [
-      {
-        type: "toolCall"
-        id: "w"
-        name: "write"
-        arguments: {path: "src/f.ts", content: "f", i: ""}
-      }
-      {
-        type: "toolCall"
-        id: "e"
-        name: "edit"
-        arguments: {path: ($lib | path join "g.ts"), old_string: "a", new_string: "b", i: ""}
-      }
-      {
-        type: "toolCall"
-        id: "p"
-        name: "edit"
-        arguments: {
-          input: (
-            "
-            [ src/h.ts#1A2B ]
-            PUT 1.=1:
-            +x
-            [src/f.ts#9C29]
-            PUT 2.=2:
-            +y
-            "
-            | str dedent
-          )
-          i: ""
-        }
-      }
-    ])
-    ...(["w" "e" "p"] | each {|id| omp-result "12:02" $id })
-  ]
-
-  let cases = [
-    {tool: "claude", repos: {lib: 0.67, app: 0.33}}
-    {tool: "codex", repos: {app: 0.67, lib: 0.33}}
-    {tool: "omp", repos: {app: 0.67, lib: 0.33}}
-  ]
-
-  let day = (digest-day $dir)
-
-  for c in $cases {
-    assert equal ($day.sessions | where tool == $c.tool | get 0.prompts.0.repos) $c.repos $c.tool
-  }
 }
 
 def "test separate prompts and parallel delegates both add agent time" [] {

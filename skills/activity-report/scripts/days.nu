@@ -6,7 +6,6 @@
 
 use ./lib/dates.nu [next-day]
 use ./lib/text.nu [excerpt]
-use ./repos.nu [shares]
 use ./units.nu [agent-hours]
 
 # --------------------------------------------------------------------------------------------------
@@ -21,8 +20,6 @@ def agent-run [
   end: datetime
   session: record
   turns: list
-  repos: record
-  ignored: list<string>
   excerpt_chars: int
 ]: nothing -> any {
   let today = ($turns | where ts >= $start and ts < $end)
@@ -30,7 +27,6 @@ def agent-run [
   if ($today | is-empty) {
     null
   } else {
-    let paths = ($today | get -o paths | flatten)
     let text = (
       $today
       | each {|t| $t.text }
@@ -45,7 +41,6 @@ def agent-run [
       repo: $session.repo
       at: ($today.0.ts | format date "%H:%M")
       agent: ($today | agent-hours $cfg)
-      repos: ($paths | shares $repos $ignored)
       text: ($text | excerpt $excerpt_chars)
     }
   }
@@ -86,8 +81,6 @@ export def day [
   units: record
   prompt_units: list<string>
   continuations: list
-  repos: record
-  ignored: list<string>
   excerpt_chars: int
 ]: nothing -> record {
   let end = ($start | next-day)
@@ -99,7 +92,7 @@ export def day [
     | where {|unit| $unit.unit not-in $prompt_units }
     | each {|unit|
       let session = ($sessions | where transcript == $unit.unit | first)
-      agent-run $cfg $start $end $session $unit.turns $repos $ignored $excerpt_chars
+      agent-run $cfg $start $end $session $unit.turns $excerpt_chars
     }
     | compact
     | sort-by at
@@ -132,7 +125,6 @@ export def day [
               at: ($p.ts | format date "%H:%M")
               hours: $p.hours
               agent: $p.agent
-              repos: $p.repos
               text: ($p.text | excerpt $excerpt_chars)
             }
           }
@@ -141,7 +133,7 @@ export def day [
         continued: (
           $later
           | where transcript == $transcript
-          | select from text agent repos
+          | select from text agent
         )
       }
     }

@@ -52,25 +52,22 @@ A session's `replies` run from its first prompt that day until its next prompt o
 
 Each prompt entry has these fields:
 
-| Field   | Type or unit        | Meaning                                                                                      |
-| ------- | ------------------- | -------------------------------------------------------------------------------------------- |
-| `at`    | `HH:MM`             | Local clock time.                                                                            |
-| `hours` | hours               | Human credit, rounded to four decimal places.                                                |
-| `agent` | hours               | Agent time, rounded to four decimal places.                                                  |
-| `repos` | record of fractions | Repository shares of the files its turns and delegates wrote. Empty when they wrote nothing. |
-| `text`  | string              | Prompt text, cut to `--excerpt-chars` characters, or whole when the option is 0.             |
+| Field   | Type or unit | Meaning                                                                          |
+| ------- | ------------ | -------------------------------------------------------------------------------- |
+| `at`    | `HH:MM`      | Local clock time.                                                                |
+| `hours` | hours        | Human credit, rounded to four decimal places.                                    |
+| `agent` | hours        | Agent time, rounded to four decimal places.                                      |
+| `text`  | string       | Prompt text, cut to `--excerpt-chars` characters, or whole when the option is 0. |
 
 Human credit is the time from the prompt to the end of its turn, plus `hours.reading_minutes`, cut short by the next prompt in any session and capped at `hours.max_minutes`. Only attended sessions list prompts. Messages from a headless session, a sidechain session, or a session whose directory matches `excluded_dirs` appear under `runs`, or join the prompt that delegated to them.
 
 A turn the person did not start earns no human credit.
 
-Repository shares include only confirmed successful writes. Claude and OMP associate the result with its request and keep the request's time for attribution. A recent delegate can continue a prompt in an older parent transcript.
+A recent delegate can continue a prompt in an older parent transcript.
 
 Agent time is the time the prompt's turn and every delegate it started spent, such as a subagent, a teammate, a Codex subagent thread, or an OMP advisor.
 
 A turn runs from its start to its first reply or last model output, is capped at `hours.agent_max_minutes`, and stops at its last record before a gap longer than `hours.agent_idle_minutes`. Agent time is counted on the day its turn started, even when the turn continues past midnight. Every transcript adds its own time, so parallel delegates each add to the prompt they followed.
-
-A prompt's `repos` counts the distinct files its turns and delegates wrote, groups them by repository, and gives each repository its fraction of the total, rounded to two decimals and ordered largest first. git-ignored files never count when they resolve inside a checkout, including a file under a directory that no longer exists inside that checkout. A file in a deleted sibling worktree under `<name>__worktrees` counts, because its repository attribution resolves to the main checkout while the path lies outside it. A prompt whose turns wrote no files has an empty record.
 
 ## Replies
 
@@ -80,21 +77,19 @@ Each reply entry has `at` and `text`, with the same meaning as a prompt's fields
 
 Each continuation entry records a prompt from an earlier day whose turns started that day:
 
-| Field   | Type or unit        | Meaning                                                                                                        |
-| ------- | ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `from`  | `YYYY-MM-DD HH:MM`  | The prompt's local date and time.                                                                              |
-| `text`  | string              | The prompt's excerpt.                                                                                          |
-| `agent` | hours               | Agent time for the turns that started that day.                                                                |
-| `repos` | record of fractions | Shares of the files those turns wrote, as above, falling back to the prompt's `repos` when they wrote nothing. |
+| Field   | Type or unit       | Meaning                                         |
+| ------- | ------------------ | ----------------------------------------------- |
+| `from`  | `YYYY-MM-DD HH:MM` | The prompt's local date and time.               |
+| `text`  | string             | The prompt's excerpt.                           |
+| `agent` | hours              | Agent time for the turns that started that day. |
 
 ## Runs
 
 Each run entry describes agent work that no prompt started, such as a Workmux worker, a headless run, or the start of a session before its first prompt.
 
-| Field                            | Type or unit        | Meaning                                                                                                         |
-| -------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `tool`, `session`, `cwd`, `repo` |                     | The same fields as a session.                                                                                   |
-| `at`                             | `HH:MM`             | Local clock time of the run's first turn that day.                                                              |
-| `agent`                          | hours               | Agent time for the run's turns that started that day, measured as above.                                        |
-| `repos`                          | record of fractions | Repository shares of the files those turns wrote, as above.                                                     |
-| `text`                           | string              | The first non-empty text among those turns, cut to `--excerpt-chars` characters, or whole when the option is 0. |
+| Field                            | Type or unit | Meaning                                                                                                         |
+| -------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `tool`, `session`, `cwd`, `repo` |              | The same fields as a session.                                                                                   |
+| `at`                             | `HH:MM`      | Local clock time of the run's first turn that day.                                                              |
+| `agent`                          | hours        | Agent time for the run's turns that started that day, measured as above.                                        |
+| `text`                           | string       | The first non-empty text among those turns, cut to `--excerpt-chars` characters, or whole when the option is 0. |

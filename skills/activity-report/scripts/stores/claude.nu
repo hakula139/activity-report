@@ -33,30 +33,6 @@ def question [r: record]: nothing -> any {
   }
 }
 
-# Absolute paths a Claude record wrote: Edit and Write name a file, NotebookEdit a notebook.
-def writes [r: record, succeeded: list]: nothing -> list<string> {
-  if ($r.message.content | describe --detailed | get type) != "list" {
-    return []
-  }
-
-  $r.message.content
-  | where {|part|
-    (
-      $part.type? == "tool_use"
-      and $part.name? in ["Edit" "Write" "NotebookEdit"]
-      and $part.id? in $succeeded
-    )
-  }
-  | each {|part|
-    if $part.name == "NotebookEdit" {
-      $part.input.notebook_path?
-    } else {
-      $part.input.file_path?
-    }
-  }
-  | compact
-}
-
 # Subagents end their run with a SubagentHandback call in place of a final text reply.
 def reply [r: record]: nothing -> bool {
   $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
@@ -98,18 +74,6 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
       return null
     }
 
-    let succeeded = (
-      $records
-      | each {|r|
-        if ($r.message?.content? | describe --detailed | get type) == "list" {
-          $r.message.content
-          | where {|part| $part.type? == "tool_result" and $part.is_error? != true }
-          | get -o tool_use_id
-        }
-      }
-      | flatten
-      | compact
-    )
     let events = (
       $records
       | each {|r|
@@ -143,18 +107,7 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
           {kind: "model", ts: $r.timestamp}
         }
 
-        let write = if $r.type == "assistant" {
-          let paths = (writes $r $succeeded)
-          if ($paths | is-not-empty) {
-            {
-              kind: "write"
-              ts: $r.timestamp
-              paths: $paths
-            }
-          }
-        }
-
-        [$event $model $write]
+        [$event $model]
       }
       | flatten
       | compact

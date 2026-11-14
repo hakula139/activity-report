@@ -34,7 +34,7 @@ export def transcript [dir: string, path: list<string>, records: list]: nothing 
   }
 }
 
-# A repository whose checkout the digest can find, ignoring agent scratch like the real ones.
+# A repository with an initial commit so tests can create worktrees.
 export def git-repo [dir: string, name: string]: nothing -> string {
   let path = ($dir | path join $name)
   mkdir $path
@@ -45,9 +45,6 @@ export def git-repo [dir: string, name: string]: nothing -> string {
       init --quiet
   )
 
-  ".claude/agent-memory-local/\n" | save ($path | path join ".gitignore")
-  ^git -C $path add ".gitignore"
-
   (
     ^git
       -C $path
@@ -55,6 +52,7 @@ export def git-repo [dir: string, name: string]: nothing -> string {
       -c "user.email=test@test"
       commit
         --quiet
+        --allow-empty
         -m "init"
   )
 
@@ -132,42 +130,6 @@ export def claude-tool [
   {type: "assistant", cwd: $cwd, timestamp: (at $clock), message: $message}
 }
 
-export def claude-result [
-  cwd: string
-  clock: string
-  id: string = "tool"
-  --error
-]: nothing -> record {
-  let content = [{
-    type: "tool_result"
-    tool_use_id: $id
-    is_error: $error
-    content: "result"
-  }]
-  {
-    type: "user"
-    cwd: $cwd
-    timestamp: (at $clock)
-    message: {
-      role: "user"
-      content: $content
-    }
-    toolUseResult: {}
-  }
-}
-
-export def claude-write [
-  cwd: string
-  clock: string
-  name: string
-  input: record
-]: nothing -> list<record> {
-  [
-    (claude-tool $cwd $clock $name $input)
-    (claude-result $cwd $clock)
-  ]
-}
-
 export def claude-subagent [
   dir: string
   project: string
@@ -212,11 +174,6 @@ export def codex-turn [clock: string, text?: string, --done: string]: nothing ->
     (if $done != null { codex-event $done {type: "task_complete", last_agent_message: "ok"} })
   ]
   | compact
-}
-
-export def codex-file-change [clock: string, changes: record]: nothing -> record {
-  let item = {type: "FileChange", id: "change", status: "completed", changes: $changes}
-  codex-event $clock {type: "item_completed", item: ($item | merge {stdout: "", stderr: ""})}
 }
 
 export def codex-transcript [

@@ -86,12 +86,7 @@ def "test a day keeps its final replies past midnight until the next prompt" [] 
   transcript $dir ["claude/projects/app/a.jsonl"] [
     (claude-prompt "/work/app" "10:00" "start")
     (claude-reply "/work/app" "10:05" "working")
-    ...(claude-write "/work/app" "10:06" "Edit" {
-      file_path: "/work/app/a.nu"
-      old_string: "a"
-      new_string: "b"
-      replace_all: false
-    })
+    ...(claude-active "/work/app" ["10:06"])
     (claude-notification "/work/app" "10:08")
     (claude-reply "/work/app" "10:12" "started")
     (claude-prompt "/work/app" "10:15" "ship it")
@@ -111,7 +106,6 @@ def "test a day keeps its final replies past midnight until the next prompt" [] 
 def "test a delegate turn on a later day continues its prompt there" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
-  let lib = (git-repo $dir "lib")
   let lead = "aaaabbbb-0000-4000-8000-000000000003"
   transcript $dir ["claude/projects/app" $"($lead).jsonl"] [
     (claude-prompt $app "22:00" "P")
@@ -121,13 +115,10 @@ def "test a delegate turn on a later day continues its prompt there" [] {
   ]
   claude-subagent $dir "app" $lead "a" {agentType: "implementer", toolUseId: "t", spawnDepth: 1} [
     (claude-user $app "22:30" "task" {isSidechain: true})
-    ...(claude-write $app "23:00" "Write" {file_path: ($app | path join "src/x.nu"), content: "x"})
+    ...(claude-active $app ["23:00"])
     (claude-tool $app "23:00" "SubagentHandback" {})
     (claude-user $app "2026-10-16T00:10" "continue" {isSidechain: true})
-    ...(claude-write $app "2026-10-16T00:40" "Write" {
-      file_path: ($lib | path join "y.nu")
-      content: "y"
-    })
+    ...(claude-active $app ["2026-10-16T00:40"])
     (claude-tool $app "2026-10-16T00:50" "SubagentHandback" {})
   ]
 
@@ -136,10 +127,9 @@ def "test a delegate turn on a later day continues its prompt there" [] {
   let second = ($output.days | where date == "2026-10-16" | get 0)
 
   assert equal $first.sessions.0.prompts.0.agent 0.8333
-  assert equal $first.sessions.0.prompts.0.repos {app: 0.5, lib: 0.5}
   assert equal $second.sessions.0.prompts.0.agent 0.5
   assert equal $second.sessions.0.continued [
-    {from: "2026-10-15 22:00", text: "P", agent: 0.6667, repos: {lib: 1.0}}
+    {from: "2026-10-15 22:00", text: "P", agent: 0.6667}
   ]
 }
 
@@ -160,7 +150,7 @@ def "test a continuation books its turn on the local day" [] {
 
   assert equal $output.days.0.sessions.0.prompts.0.agent 0.5
   assert equal $output.days.1.sessions.0.continued [
-    {from: "2026-10-15 18:00", text: "P", agent: 0.5, repos: {}}
+    {from: "2026-10-15 18:00", text: "P", agent: 0.5}
   ]
 }
 
@@ -182,33 +172,9 @@ def "test a continuation text is excerpted" [] {
   assert equal ($output.days.1.sessions.0.continued | get text) ["a long..."]
 }
 
-def "test a continuation that wrote nothing takes the prompt repositories" [] {
-  let dir = (mktemp --directory)
-  let app = (git-repo $dir "app")
-  let lead = "aaaabbbb-0000-4000-8000-000000000007"
-  transcript $dir ["claude/projects/app" $"($lead).jsonl"] [
-    (claude-prompt $app "22:00" "P")
-    (claude-reply $app "22:20" "first")
-  ]
-  claude-subagent $dir "app" $lead "a" {agentType: "implementer", toolUseId: "t", spawnDepth: 1} [
-    (claude-user $app "22:30" "task" {isSidechain: true})
-    ...(claude-write $app "23:00" "Write" {file_path: ($app | path join "src/x.nu"), content: "x"})
-    (claude-tool $app "23:00" "SubagentHandback" {})
-    (claude-user $app "2026-10-16T00:10" "continue" {isSidechain: true})
-    (claude-reply $app "2026-10-16T00:40" "done")
-  ]
-
-  let output = (digest-output $dir --to "2026-10-16")
-
-  assert equal $output.days.1.sessions.0.continued [
-    {from: "2026-10-15 22:00", text: "P", agent: 0.5, repos: {app: 1.0}}
-  ]
-}
-
 def "test a continuation-only day lists the lead session without prompts" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
-  let lib = (git-repo $dir "lib")
   let lead = "aaaabbbb-0000-4000-8000-000000000004"
   transcript $dir ["claude/projects/app" $"($lead).jsonl"] [
     (claude-prompt $app "22:00" "P")
@@ -216,10 +182,7 @@ def "test a continuation-only day lists the lead session without prompts" [] {
   ]
   claude-subagent $dir "app" $lead "a" {agentType: "implementer", toolUseId: "t", spawnDepth: 1} [
     (claude-user $app "2026-10-16T00:10" "continue" {isSidechain: true})
-    ...(claude-write $app "2026-10-16T00:40" "Write" {
-      file_path: ($lib | path join "y.nu")
-      content: "y"
-    })
+    ...(claude-active $app ["2026-10-16T00:40"])
     (claude-tool $app "2026-10-16T00:50" "SubagentHandback" {})
   ]
 
@@ -230,9 +193,9 @@ def "test a continuation-only day lists the lead session without prompts" [] {
   assert equal $output.days.0.sessions.0.prompts []
   assert equal $output.days.0.sessions.0.replies []
   assert equal $output.days.0.sessions.0.continued [
-    {from: "2026-10-15 22:00", text: "P", agent: 0.6667, repos: {lib: 1.0}}
+    {from: "2026-10-15 22:00", text: "P", agent: 0.6667}
   ]
-  assert equal ($output.repositories | columns | sort) ["app" "lib"]
+  assert equal $output.repositories {app: $app}
 }
 
 def "test an old recursive ancestor still owns a recent continuation" [] {
@@ -291,7 +254,6 @@ def "test an old recursive ancestor still owns a recent continuation" [] {
         from: "2026-10-15 22:00"
         text: "original task"
         agent: 0.5
-        repos: {}
       }]
     }]
     runs: []

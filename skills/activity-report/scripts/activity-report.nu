@@ -10,11 +10,11 @@
 use ./config.nu [load]
 use ./days.nu [day]
 use ./lib/dates.nu [day-start]
-use ./repos.nu [ignored-paths repo-name repositories repository-map]
+use ./repos.nu [repo-name repositories repository-map]
 use ./stores/claude.nu
 use ./stores/codex.nu
 use ./stores/omp.nu
-use ./units.nu [continuations credit-prompts link unit-shares]
+use ./units.nu [continuations credit-prompts link]
 
 # --------------------------------------------------------------------------------------------------
 # Entry point
@@ -67,42 +67,27 @@ def "main digest" [
     | flatten
   )
 
-  let paths = ($turns | get -o paths | flatten | uniq)
-  let dirs = (($paths | each {|path| $path | path dirname }) ++ ($linked | get cwd) | uniq)
+  let dirs = ($linked | get cwd | uniq)
   let repos = (repository-map $dirs)
-  let ignored = (ignored-paths $repos $paths)
   let linked = ($linked | each {|s| $s | insert repo (repo-name ($repos | get -o $s.cwd)) })
 
   let units = ($turns | group-by unit)
-  let shares = ($units | unit-shares $repos $ignored)
-  let credited = (
-    $linked
-    | credit-prompts $cfg $units
-    | each {|p| $p | insert repos ($shares | get $p.unit) }
-  )
-  let continuations = ($credited | continuations $cfg $units $repos $ignored $excerpt_chars)
+  let credited = ($linked | credit-prompts $cfg $units)
+  let continuations = ($credited | continuations $cfg $units $excerpt_chars)
   let prompt_units = ($credited | get unit | uniq)
 
   let days = (
     $days
     | each {|start|
-      (
-        day $cfg $start $linked $credited $units $prompt_units $continuations $repos $ignored
-          $excerpt_chars
-      )
+      day $cfg $start $linked $credited $units $prompt_units $continuations $excerpt_chars
     }
   )
 
   let names = (
     (
       ($days | each {|day| $day.sessions | each {|s| $s.repo } })
-      ++ ($days | each {|day| $day.sessions | each {|s| $s.prompts | get repos | columns } })
-      ++ ($days | each {|day| $day.sessions | each {|s| $s.continued | get repos | columns } })
       ++ ($days | each {|day| $day.runs | each {|r| $r.repo } })
-      ++ ($days | each {|day| $day.runs | each {|r| $r.repos | columns } })
     )
-    | flatten
-    | flatten
     | flatten
     | compact
     | uniq
