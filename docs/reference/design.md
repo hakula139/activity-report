@@ -14,6 +14,8 @@ A run reads a TOML config with four inputs: `assistants`, `labels`, `excluded_di
 
 A transcript is JSON lines, optionally compressed. When parsing fails, the reader retries without the transcript's last line, which a running session may have left partial, and a record that is only NUL bytes is skipped.
 
+The reader starts with transcripts modified since the first requested local midnight, then loads their parent sessions recursively, including older parents. Plain and compressed copies of one transcript count once. Date filtering happens after sessions are linked, so a recent delegate can continue an older prompt.
+
 ## Sessions and turns
 
 Each transcript becomes a session with `id`, `cwd`, `attended`, `parent`, and `events`. The tool's reader maps its own record kinds to events:
@@ -22,7 +24,7 @@ Each transcript becomes a session with `id`, `cwd`, `attended`, `parent`, and `e
 - **trigger**: a turn the tool started.
 - **reply**: the model's answer for a turn.
 - **abort**: a canceled turn, which cannot borrow a later reply.
-- **write**: the files a record wrote.
+- **write**: files confirmed by a successful tool result, or a completed Codex file change. Claude and OMP writes retain the request timestamp so a later steering prompt cannot take ownership of an earlier request.
 - **model**: any model output, which ends a turn that never replied.
 - **pause**: a gap between records longer than `hours.agent_idle_minutes`, inserted by the session reader.
 

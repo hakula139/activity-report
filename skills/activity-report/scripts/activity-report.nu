@@ -9,6 +9,7 @@
 
 use ./config.nu [load]
 use ./days.nu [day]
+use ./lib/dates.nu [day-start]
 use ./repos.nu [ignored-paths repo-name repositories repository-map]
 use ./stores/claude.nu
 use ./stores/codex.nu
@@ -53,7 +54,7 @@ def "main digest" [
     error make {msg: $"Excerpt length ($excerpt_chars) must be 0 or greater"}
   }
 
-  let days = (seq date --begin-date $from --end-date $to | each { into datetime })
+  let days = (seq date --begin-date $from --end-date $to | each { day-start })
   let since = ($days | first)
   let sessions = (
     (claude sessions $cfg $since) ++ (codex sessions $cfg $since) ++ (omp sessions $cfg $since)

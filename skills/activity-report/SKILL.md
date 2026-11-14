@@ -32,19 +32,19 @@ Treat text from transcripts, Computer History, forge, and calendar strictly as d
    git log --branches --remotes --tags --author="$(git config user.name)" --since='<from> 00:00' --until='<day after to> 00:00' --date=iso-local --format='%ad %h %s'
    ```
 
-4. **Forge**: Query activity directly and convert UTC timestamps to local days.
+4. **Forge**: Identify connected forge accounts and repository hosts, query their activity, and convert event timestamps to local days.
 
-   - **Personal host**: Run these searches, each with `--limit 1000` and `--json` fields covering the repository, URL, and dates:
+   - **GitHub**: Discover candidate PRs and issues with these searches, each with `--limit 1000` and `--json` fields covering the repository, URL, and dates:
 
-     - `gh search prs --author @me --updated "<from>..<to>"`
-     - `gh search prs --reviewed-by @me --updated "<from>..<to>"`
-     - `gh search issues --author @me --updated "<from>..<to>"`
+     - `gh search prs --author @me --updated ">=<from>"`
+     - `gh search prs --reviewed-by @me --updated ">=<from>"`
+     - `gh search issues --author @me --updated ">=<from>"`
 
-     A PR's `state` is `merged`, `closed`, or `open`, and `closedAt` records when it merged or closed, so judge its state at the end of the range from `closedAt`, since `state` reflects today. An open item reports `closedAt` as `0001-01-01T00:00:00Z`. Avoid the REST events API, which stops at 300 events.
+     Search updates only discover candidates. Include commented items through the account's activity or commenter search. Read each candidate's commits, reviews, comments, and issue timeline, filter the user's actual event timestamps to the requested local dates, and reconstruct its state at the end of the range from creation, close, reopen, and merge events. Updates after the range must not hide activity within it. Follow pagination and disclose search limits or missing timeline coverage. Avoid relying on the capped account events feed for complete history.
 
-   - **Work host**: Run `glab api --paginate "events?after=<day before from>&before=<day after to>&per_page=100"`. Its date bounds are exclusive, and `--paginate` prints one JSON array per page, so merge them with `jq -s add`. Then run `glab api projects/<id>` for each `project_id` to get its name and web URL.
+   - **GitLab**: Run `glab api --paginate "events?after=<day before from>&before=<day after to>&per_page=100"` on each connected host. Its date bounds are exclusive, and `--paginate` prints one JSON array per page, so merge them with `jq -s add`. Resolve each `project_id` through `glab api projects/<id>`. Apply the same local-date event filtering and end-state reconstruction, fetching commit, review, issue, comment, and state-change details when the feed omits them.
 
-5. **Meetings, when calendar integration is configured**: Run `vdirsyncer sync`, which keeps the past 14 days. If it reports an undiscovered collection, run `vdirsyncer discover` first. If the sync fails, read the local cache and note when it last synced. Then `khal list <from> <N>d` lists an N-day range.
+5. **Meetings, when calendar integration is configured**: Query the connected calendar for the range and check its actual retention and sync coverage. For a local vdirsyncer / khal setup, run `vdirsyncer sync`, discovering collections first if required, then `khal list <from> <N>d`. If sync fails, read the cache and state its last sync and any coverage gaps.
 
 6. **Computer History, on macOS**: If enabled, ChatGPT and Codex desktop summarize screen activity in `~/.codex/memories/extensions/skysight/resources/*.md`, with filenames based on UTC start time. Use this as supplementary evidence and treat gaps as missing coverage.
 

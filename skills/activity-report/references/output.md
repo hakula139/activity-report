@@ -23,6 +23,8 @@ When two repositories share a directory name, `repositories` keeps the first roo
 
 Each day entry has these fields:
 
+Days follow local civil midnights, including daylight-saving transitions. Repeated clock times remain separate instants even though `at` shows the same `HH:MM`.
+
 | Field      | Type   | Meaning                                            |
 | ---------- | ------ | -------------------------------------------------- |
 | `date`     | string | Local date, as `YYYY-MM-DD`.                       |
@@ -61,6 +63,8 @@ Each prompt entry has these fields:
 Human credit is the time from the prompt to the end of its turn, plus `hours.reading_minutes`, cut short by the next prompt in any session and capped at `hours.max_minutes`. Only attended sessions list prompts. Messages from a headless session, a sidechain session, or a session whose directory matches `excluded_dirs` appear under `runs`, or join the prompt that delegated to them.
 
 A turn the person did not start earns no human credit.
+
+Repository shares include only confirmed successful writes. Claude and OMP associate the result with its request and keep the request's time for attribution. A recent delegate can continue a prompt in an older parent transcript.
 
 Agent time is the time the prompt's turn and every delegate it started spent, such as a subagent, a teammate, a Codex subagent thread, or an OMP advisor.
 
