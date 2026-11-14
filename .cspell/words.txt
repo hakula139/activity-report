@@ -23,6 +23,8 @@ statix
 subagent
 subagents
 substituters
+tzdata
+TZDIR
 unspanned
 vdirsyncer
 workmux

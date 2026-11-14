@@ -17,7 +17,7 @@
   package = activityReport;
 
   tests = import ./scripts {
-    inherit dk commonInputs;
+    inherit pkgs dk commonInputs;
     root = ../.;
   };
 }
