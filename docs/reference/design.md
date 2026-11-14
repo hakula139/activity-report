@@ -24,11 +24,10 @@ Each transcript becomes a session with `id`, `cwd`, `attended`, `parent`, and `e
 - **trigger**: a turn the tool started.
 - **reply**: the model's answer for a turn.
 - **abort**: a canceled turn, which cannot borrow a later reply.
-- **write**: files confirmed by a successful tool result, or a completed Codex file change. Claude and OMP writes retain the request timestamp so a later steering prompt cannot take ownership of an earlier request.
 - **model**: any model output, which ends a turn that never replied.
 - **pause**: a gap between records longer than `hours.agent_idle_minutes`, inserted by the session reader.
 
-A turn starts at a prompt or trigger, ends at its first reply or its last model output, and collects the writes that follow its start. Every turn adds its own time, so a parallel delegate spends its own time.
+A turn starts at a prompt or trigger, ends at its first reply or its last model output. Every turn adds its own time, so a parallel delegate spends its own time.
 
 `attended` is false for headless runs (`codex exec`, MCP, SDK entrypoints), sidechains, Codex sessions whose `thread_source` is not `user`, and sessions whose `cwd` matches an entry in `excluded_dirs`. Only an attended session's prompts earn human hours.
 
@@ -43,11 +42,9 @@ A unit is one prompt plus every delegate turn it started. A session's `parent` n
 
 Hours are rounded to four decimals internally. The skill rounds the report itself.
 
-## Repositories and shares
+## Repositories
 
-Every written path and every session `cwd` is resolved to the repository holding it with `git rev-parse`. A linked worktree resolves to its main checkout, and a deleted sibling worktree resolves to its main checkout before falling back to the nearest existing ancestor. git-ignored files are excluded from shares when they resolve inside a checkout, including files under a directory that no longer exists inside it. A file in a deleted sibling worktree under `<name>__worktrees` counts, because its repository resolves to the main checkout while the path lies outside it.
-
-A unit's `repos` splits its distinct written files among the repositories, rounded to two decimals and ordered largest first. A prompt with no writes keeps an empty `repos`.
+Each session's `cwd` is resolved to its repository with `git rev-parse`. A linked worktree resolves to its main checkout, and a deleted sibling worktree resolves to its main checkout before falling back to the nearest existing ancestor. The skill attributes tasks to projects using the conversation and supporting evidence.
 
 ## Days and output
 

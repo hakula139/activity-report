@@ -7,43 +7,10 @@
 use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
 
-# An OMP call writes one path, and its patch form names a path per `[<path>#<hash>]` header.
-def call-paths [cwd: string, call: record]: nothing -> list<string> {
-  let args = ($call.arguments | default {})
-  let paths = (
-    [($args.path?)]
-    ++ (
-      if $args.input? == null {
-        []
-      } else {
-        $args.input
-        | lines
-        | parse --regex '^\[\s*(?<path>.+?)#\w+\s*\]$'
-        | get path
-      }
-    )
-  )
-  $paths
-  | compact
-  | each {|path| $cwd | path join $path | path expand --no-symlink }
-}
-
 export def sessions [cfg: record, since: datetime]: nothing -> list {
   read-sessions $cfg $since "omp" ["sessions/**/*.jsonl"] {|records, file|
     let meta = ($records | where type == "session" | first)
     let cwd = $meta.cwd
-    let succeeded = (
-      $records
-      | where {|r|
-        (
-          $r.type == "message"
-          and $r.message.role? == "toolResult"
-          and $r.message.isError? == false
-        )
-      }
-      | get -o message.toolCallId
-      | compact
-    )
     let events = (
       $records
       | each {|r|
@@ -64,33 +31,7 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
           {kind: "model", ts: $r.timestamp}
         }
 
-        let write = if (
-          $r.type == "message"
-          and $r.message.role? == "assistant"
-          and ($r.message.content | describe --detailed | get type) == "list"
-        ) {
-          let paths = (
-            $r.message.content
-            | where {|part|
-              (
-                $part.type? == "toolCall"
-                and $part.name? in ["write" "edit"]
-                and $part.id? in $succeeded
-              )
-            }
-            | each {|part| call-paths $cwd $part }
-            | flatten
-          )
-          if ($paths | is-not-empty) {
-            {
-              kind: "write"
-              ts: $r.timestamp
-              paths: $paths
-            }
-          }
-        }
-
-        [$event $model $write]
+        [$event $model]
       }
       | flatten
       | compact

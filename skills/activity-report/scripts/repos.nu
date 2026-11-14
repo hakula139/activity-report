@@ -1,7 +1,7 @@
 # ==================================================================================================
 # Activity Report: Repositories
 # ==================================================================================================
-# Repository resolution, ignored files, and file shares.
+# Repository resolution from session directories.
 # ==================================================================================================
 
 # --------------------------------------------------------------------------------------------------
@@ -14,8 +14,7 @@ def worktrees-main [dir: string]: nothing -> any {
   $dir | parse --regex "^(?<main>.+)__worktrees/" | get -o 0.main
 }
 
-# The nearest existing ancestor of a directory without resolving a sibling worktree, so a deleted
-# sibling worktree stays outside its main checkout.
+# The nearest existing ancestor of a directory.
 def literal-ancestor [dir: string]: nothing -> any {
   if ($dir | path exists) {
     $dir
@@ -44,35 +43,11 @@ def existing-ancestor [dir: string]: nothing -> any {
   }
 }
 
-# Whether a path lies inside a checkout, resolving a symlink in its nearest existing ancestor.
-def inside-checkout [path: string, checkout: string]: nothing -> bool {
-  let ancestor = (literal-ancestor ($path | path dirname))
-
-  if $ancestor == null {
-    false
-  } else {
-    let root = ($checkout | path expand)
-    let resolved = ($ancestor | path expand)
-    $resolved == $root or ($resolved | str starts-with $"($root)/")
-  }
-}
-
-# A written path with its existing directory resolved, so a symlinked parent names the directory the
-# write lands in.
-export def physical [path: string]: nothing -> string {
-  let dir = ($path | path dirname)
-  if ($dir | path exists) {
-    $dir | path expand | path join ($path | path basename)
-  } else {
-    $path
-  }
-}
-
 # --------------------------------------------------------------------------------------------------
 # Repositories
 # --------------------------------------------------------------------------------------------------
 
-# The repository at a directory, as its checkout and root, or null outside any repository. A linked
+# The repository at a directory, as its root, or null outside any repository. A linked
 # worktree's root is its main checkout, the parent of the worktree's common git dir.
 def repository-of [dir: string]: nothing -> any {
   let run = (
@@ -91,7 +66,6 @@ def repository-of [dir: string]: nothing -> any {
   } else {
     let parts = ($run.stdout | lines)
     {
-      checkout: $parts.2
       root: (if $parts.0 == $parts.1 {
         $parts.2
       } else {
@@ -122,72 +96,6 @@ export def repo-name [repo: any]: nothing -> any {
   } else {
     $repo.root | path basename
   }
-}
-
-# The repository containing a written path, or null.
-def repo-of-file [repos: record, path: string]: nothing -> any {
-  $repos | get -o ($path | path dirname)
-}
-
-# --------------------------------------------------------------------------------------------------
-# Ignored files and shares
-# --------------------------------------------------------------------------------------------------
-
-# Paths git ignores, checked once per checkout. A path outside its resolved checkout is never
-# reported, since a deleted sibling worktree resolves to its main checkout, whose check-ignore
-# rejects it.
-export def ignored-paths [repos: record, paths: list<string>]: nothing -> list<string> {
-  $paths
-  | each {|path| {path: $path, repo: (repo-of-file $repos $path)} }
-  | where repo != null
-  | where {|row| inside-checkout $row.path $row.repo.checkout }
-  | group-by {|row| $row.repo.checkout }
-  | transpose checkout rows
-  | each {|group|
-    let run = (
-      $group.rows
-      | get path
-      | str join (char nul)
-      | ^git
-        -C $group.checkout
-        check-ignore
-          -z
-          --stdin
-      | complete
-    )
-
-    if $run.exit_code not-in [0 1] {
-      error make {msg: $"git check-ignore failed in ($group.checkout): ($run.stderr | str trim)"}
-    }
-
-    $run.stdout
-    | split row (char nul)
-    | compact --empty
-  }
-  | flatten
-}
-
-# Split a list of files among their repositories by distinct-file count, largest share first.
-export def shares [repos: record, ignored: list<string>]: list<string> -> record {
-  let repos_of_files = (
-    $in
-    | uniq
-    | where {|path| $path not-in $ignored }
-    | each {|path| repo-name (repo-of-file $repos $path) }
-    | compact
-    | sort
-  )
-  let counts = ($repos_of_files | uniq --count)
-
-  if ($counts | is-empty) {
-    return {}
-  }
-
-  let total = ($counts | get count | math sum)
-  $counts
-  | each {|count| {repo: $count.value, share: ($count.count / $total | math round --precision 2)} }
-  | sort-by share --reverse
-  | reduce --fold {} {|count, acc| $acc | insert $count.repo $count.share }
 }
 
 # --------------------------------------------------------------------------------------------------

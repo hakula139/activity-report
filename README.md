@@ -7,9 +7,9 @@ Reconstruct what you worked on over a date range, with human and agent hours per
 
 ## How it works
 
-Coding agents already record what happened. Each session stores its working directory, every prompt and answer, the files it wrote, and which subagents or workers it started. That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
+Coding agents already record what happened. Each session stores its working directory, every prompt and answer, and which subagents or workers it started. That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
 
-`activity-report digest` reads those stores and prints one JSON document for a range of local dates. For each day it lists the sessions, their prompts, the reply each prompt produced, work that no prompt started, and the repositories those turns wrote. The [agent skill](#agent-skill) turns that evidence into an hours-by-project and hours-by-task report.
+`activity-report digest` reads those stores and prints one JSON document for a range of local dates. For each day it lists the sessions, their prompts, the reply each prompt produced, work that no prompt started, and their working directories and repositories. The [agent skill](#agent-skill) turns that evidence into an hours-by-project and hours-by-task report.
 
 ## Install
 

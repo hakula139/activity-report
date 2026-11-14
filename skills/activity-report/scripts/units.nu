@@ -1,12 +1,11 @@
 # ==================================================================================================
 # Activity Report: Units
 # ==================================================================================================
-# Units, their repository shares and agent time, human credit, and continuations.
+# Units, their agent time, human credit, and continuations.
 # ==================================================================================================
 
 use ./lib/dates.nu [day-start next-day]
 use ./lib/text.nu [excerpt]
-use ./repos.nu [shares]
 
 # --------------------------------------------------------------------------------------------------
 # Linking
@@ -78,20 +77,6 @@ export def link []: list -> list {
 }
 
 # --------------------------------------------------------------------------------------------------
-# Shares
-# --------------------------------------------------------------------------------------------------
-
-# Each unit's repository shares, from the distinct files it and its delegates wrote.
-export def unit-shares [repos: record, ignored: list<string>]: record -> record {
-  $in
-  | transpose unit turns
-  | reduce --fold {} {|unit, acc|
-    let paths = ($unit.turns | get -o paths | flatten)
-    $acc | insert $unit.unit ($paths | shares $repos $ignored)
-  }
-}
-
-# --------------------------------------------------------------------------------------------------
 # Agent time
 # --------------------------------------------------------------------------------------------------
 
@@ -153,13 +138,10 @@ export def credit-prompts [cfg: record, units: record]: list -> list<record> {
 # --------------------------------------------------------------------------------------------------
 
 # Each prompt's unit turns that started after the prompt's day, one entry per later day: the
-# origin's date, time, and text, that day's agent time, and the repository shares of the files it
-# wrote, or the prompt's shares when it wrote none.
+# origin's date, time, and text, and that day's agent time.
 export def continuations [
   cfg: record
   units: record
-  repos: record
-  ignored: list<string>
   excerpt_chars: int
 ]: list -> list<record> {
   $in
@@ -172,19 +154,12 @@ export def continuations [
     | group-by {|t| $t.ts | format date "%Y-%m-%d" }
     | values
     | each {|turns|
-      let wrote = (
-        $turns
-        | get -o paths
-        | flatten
-        | shares $repos $ignored
-      )
       {
         transcript: $p.transcript
         ts: ($turns.0.ts | day-start)
         from: ($p.ts | format date "%Y-%m-%d %H:%M")
         text: ($p.text | excerpt $excerpt_chars)
         agent: ($turns | agent-hours $cfg)
-        repos: (if ($wrote | is-empty) { $p.repos } else { $wrote })
       }
     }
   }
