@@ -48,10 +48,19 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
   ] {|records|
     let meta = ($records | get -o 0.payload)
 
-    # Codex Desktop imports of other assistants' sessions carry no thread source.
-    if $meta.thread_source? == null {
-      return null
-    }
+    # Imported turns synthesize another store's activity and must not count it twice.
+    let records = (
+      $records
+      | generate {|r, imported = false|
+        let imported = if $r.type == "event_msg" and $r.payload.type? == "task_started" {
+          $r.payload.turn_id? | default "" | str starts-with "external-import-turn-"
+        } else {
+          $imported
+        }
+        {out: (if not $imported { $r }), next: $imported}
+      }
+      | compact
+    )
 
     let events = (
       $records
@@ -95,7 +104,7 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
     )
 
     # Subagents and reviewers carry other thread sources. `codex exec` and MCP runs are headless.
-    let attended = ($meta.thread_source == "user" and $meta.source? not-in ["exec" "mcp"])
+    let attended = ($meta.thread_source? == "user" and $meta.source? not-in ["exec" "mcp"])
     {
       id: $meta.id
       cwd: $meta.cwd
