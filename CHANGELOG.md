@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-11-15
+
+### Fixed
+
+- _(codex)_ Restore agent time for native sessions without `thread_source`, exclude imported history, and preserve native continuations ([#14](https://github.com/hakula139/activity-report/pull/14)).
+
+[0.2.1]: https://github.com/hakula139/activity-report/compare/v0.2.0...v0.2.1
+
 ## [0.2.0] - 2026-11-15
 
 ### Breaking changes
