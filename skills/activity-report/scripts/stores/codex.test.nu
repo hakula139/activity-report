@@ -9,6 +9,79 @@ use std-rfc/str
 
 use ../lib/fixtures.testlib.nu *
 
+def "test native Codex sources retain agent work and conservative human credit" [] {
+  let cases = [
+    {meta: {source: "vscode", thread_source: null}, kind: "run", hours: 0.0}
+    {meta: {source: "vscode"}, kind: "run", hours: 0.0}
+    {meta: {source: "vscode", thread_source: "user"}, kind: "prompt", hours: 0.3331}
+    {meta: {source: "exec", thread_source: "user"}, kind: "run", hours: 0.0}
+    {meta: {source: "mcp", thread_source: "user"}, kind: "run", hours: 0.0}
+  ]
+  for c in $cases {
+    let dir = (mktemp --directory)
+    let meta = ({id: "native", cwd: "/work/app"} | merge $c.meta)
+    codex-transcript $dir $meta [
+      ...(codex-turn "11:00" "review it")
+      (codex-model "11:05")
+      (codex-event "11:10" {type: "task_complete", last_agent_message: "native reply"})
+    ]
+
+    let day = (digest-day $dir)
+
+    assert equal ($day | select kind from text hours agent replies) [
+      {
+        kind: $c.kind
+        from: "2026-10-15T11:00:01+00:00"
+        text: "review it"
+        hours: $c.hours
+        agent: 0.1664
+        replies: [{at: "2026-10-15T11:10:00+00:00", text: "native reply"}]
+      }
+    ] ($c.meta | to json --raw)
+  }
+}
+
+def "test imported Codex turns do not duplicate work or hide native continuations" [] {
+  let imported = (codex-import "09:00" "09:10")
+  let appended = [
+    (codex-model "09:15")
+    (codex-event "09:20" {type: "task_complete", last_agent_message: "appended reply"})
+    ...(codex-import "10:00" "10:10" | where payload.type != "agent_message")
+  ]
+  let native = [
+    ...(codex-turn "11:00" "external-import-turn- is quoted text")
+    (codex-model "11:05")
+    (codex-event "11:10" {type: "task_complete", last_agent_message: "native reply"})
+  ]
+  let cases = [
+    {name: "import only", records: $imported, native: false}
+    {name: "appended import without another marker", records: ($imported ++ $appended), native: false}
+    {name: "native continuation", records: ($imported ++ $appended ++ $native), native: true}
+    {name: "later import", records: ($native ++ (codex-import "12:00" "12:10")), native: true}
+    {name: "prefix in prompt text", records: $native, native: true}
+  ]
+  for c in $cases {
+    let dir = (mktemp --directory)
+    codex-transcript $dir {id: "mixed", cwd: "/work/app", source: "vscode", thread_source: null} $c.records
+
+    let day = (digest-day $dir)
+
+    let expected = if $c.native {
+      [{
+        kind: "run"
+        from: "2026-10-15T11:00:01+00:00"
+        text: "external-import-turn- is quoted text"
+        hours: 0.0
+        agent: 0.1664
+        replies: [{at: "2026-10-15T11:10:00+00:00", text: "native reply"}]
+      }]
+    } else {
+      []
+    }
+    assert equal ($day | select kind from text hours agent replies) $expected $c.name
+  }
+}
+
 def "test Codex request headings are stripped from prompts" [] {
   let dir = (mktemp --directory)
   let cases = [

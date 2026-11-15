@@ -176,6 +176,18 @@ export def codex-turn [clock: string, text?: string, --done: string]: nothing ->
   | compact
 }
 
+export def codex-import [clock: string, done: string]: nothing -> list<record> {
+  let id = $"external-import-turn-($clock)"
+  [
+    (codex-event $clock {type: "task_started", turn_id: $id})
+    (codex-event $clock {type: "user_message", message: "imported request"})
+    (codex-model $clock)
+    (codex-event $done {type: "task_complete", turn_id: $id, last_agent_message: "imported reply"})
+    (codex-event $done {type: "agent_message", message: "<EXTERNAL SESSION IMPORTED>"})
+    (codex-event $done {type: "token_count"})
+  ]
+}
+
 export def codex-transcript [
   dir: string
   meta: record

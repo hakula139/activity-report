@@ -24,7 +24,9 @@ def "test only prompts a person typed count" [] {
   codex-transcript $dir {id: "user", cwd: $app, thread_source: "user"} (
     codex-turn "16:00" "check CI"
   )
-  codex-transcript $dir {id: "import", cwd: $app} (codex-turn "17:00" "imported")
+  codex-transcript $dir {id: "import", cwd: $app, source: "vscode", thread_source: null} (
+    codex-import "17:00" "17:10"
+  )
   transcript $dir ["omp/sessions/app/a.jsonl"] [
     {type: "session", id: "omp", cwd: $app}
     (omp-user "18:00" "plan it")
