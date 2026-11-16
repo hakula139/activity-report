@@ -4,7 +4,7 @@
 
 {
   devkit,
-  mkActivityReport,
+  packageFor,
 }:
 
 {
@@ -27,8 +27,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = mkActivityReport pkgs;
-      defaultText = lib.literalMD "activity-report built from this flake";
+      default = packageFor pkgs;
+      defaultText = lib.literalExpression "activity-report.packages.\${pkgs.stdenv.hostPlatform.system}.activity-report";
       description = "Package that provides the `activity-report` command.";
     };
 
