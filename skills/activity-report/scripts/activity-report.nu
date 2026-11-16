@@ -20,6 +20,23 @@ use ./units.nu [credit-prompts evidence link]
 # Entry point
 # --------------------------------------------------------------------------------------------------
 
+def check-date [date: string]: nothing -> nothing {
+  let valid = (
+    ($date =~ '^\d{4}-\d{2}-\d{2}$')
+    and (
+      try {
+        ($date | into datetime --format "%Y-%m-%d" | format date "%Y-%m-%d") == $date
+      } catch {
+        false
+      }
+    )
+  )
+
+  if not $valid {
+    error make {msg: $"Invalid date ($date), expected YYYY-MM-DD"}
+  }
+}
+
 # Print the agent sessions on this host as JSON, or the resolved config.
 def main [...rest: string] {
   if ($rest | is-empty) {
@@ -45,6 +62,9 @@ def "main digest" [
 ]: nothing -> nothing {
   let cfg = (load $config)
   let to = ($to | default $from)
+
+  check-date $from
+  check-date $to
 
   if $to < $from {
     error make {msg: $"Last date ($to) precedes first date ($from)"}

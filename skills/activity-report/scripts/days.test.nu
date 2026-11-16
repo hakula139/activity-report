@@ -356,7 +356,8 @@ def "test a local command before more conversation leaves no continuation" [] {
 
     let output = (digest-output $dir --to "2026-10-16")
 
-    assert equal ($output | day-entries 1 | select text agent) [{text: "Q", agent: $c.agent}] $c.command
+    let entries = ($output | day-entries 1 | select text agent)
+    assert equal $entries [{text: "Q", agent: $c.agent}] $c.command
   }
 }
 

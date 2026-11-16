@@ -79,7 +79,9 @@ def "test only a record tool result can be a question" [] {
 
   let day = (digest-day $dir)
 
-  assert equal (($day | where kind == "prompt") | select from hours) [{from: "2026-10-15T10:00:00+00:00", hours: 0.3333}]
+  assert equal (($day | where kind == "prompt") | select from hours) [
+    {from: "2026-10-15T10:00:00+00:00", hours: 0.3333}
+  ]
 }
 
 def "test a renamed lead session keeps its prompts" [] {

@@ -18,6 +18,10 @@ def "test OMP prompts and replies keep their text" [] {
 
   let day = (digest-day $dir)
 
-  assert equal (($day | where kind == "prompt") | select from text) [{from: "2026-10-15T10:00:00+00:00", text: "plan the parser"}]
-  assert equal ($day | get replies | flatten) [{at: "2026-10-15T10:20:00+00:00", text: "planned it"}]
+  assert equal (($day | where kind == "prompt") | select from text) [
+    {from: "2026-10-15T10:00:00+00:00", text: "plan the parser"}
+  ]
+  assert equal ($day | get replies | flatten) [
+    {at: "2026-10-15T10:20:00+00:00", text: "planned it"}
+  ]
 }

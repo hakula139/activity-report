@@ -5,7 +5,7 @@
 # ==================================================================================================
 
 use ../lib/text.nu [content-text]
-use ../transcripts.nu [read-sessions]
+use ../transcripts.nu [escape-glob read-sessions]
 
 # Mirrors how Codex Desktop extracts the request from a prompt.
 const REQUEST_HEADING = "## My request( for Codex)?:"
@@ -25,10 +25,10 @@ def strip-request-prefix []: string -> string {
 def parent [cfg: record, meta: record]: nothing -> any {
   let id = ($meta | get -o parent_thread_id)
 
-  if $id == null {
+  if ($id | describe) != "string" or ($id !~ '^[A-Za-z0-9_-]+$') {
     null
   } else {
-    let base = $cfg.assistants.codex
+    let base = (escape-glob $cfg.assistants.codex)
     (
       (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl")
       ++ (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl.zst")
@@ -47,6 +47,14 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
     "archived_sessions/*.jsonl.zst"
   ] {|records|
     let meta = ($records | get -o 0.payload)
+
+    if (
+      not ($meta | describe | str starts-with "record")
+      or $meta.id? == null
+      or $meta.cwd? == null
+    ) {
+      return null
+    }
 
     # Imported turns synthesize another store's activity and must not count it twice.
     let records = (

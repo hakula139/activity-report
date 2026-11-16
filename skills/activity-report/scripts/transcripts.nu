@@ -130,6 +130,11 @@ def transcript-stem [file: string]: nothing -> string {
   $file | str replace --regex '\.zst$' ""
 }
 
+# Escape wax glob metacharacters in a literal path segment.
+export def escape-glob [path: string]: nothing -> string {
+  $path | str replace --all --regex '([?*\[\]{}<>():,$])' '\$1'
+}
+
 # Read recent transcripts and their ancestor closure. The parser maps records and a file to
 # `id`, `cwd`, `attended`, `parent`, and `events`, or null to skip it.
 export def read-sessions [
@@ -139,9 +144,10 @@ export def read-sessions [
   globs: list<string>
   parse: closure
 ]: nothing -> list {
+  let base = (escape-glob ($cfg.assistants | get $tool))
   let files = (
     $globs
-    | each {|pattern| glob ($cfg.assistants | get $tool | path join $pattern) }
+    | each {|pattern| glob ($base | path join $pattern) }
     | flatten
     | each {|file|
       {

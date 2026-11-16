@@ -5,7 +5,7 @@
 # ==================================================================================================
 
 use ../lib/text.nu [content-text]
-use ../transcripts.nu [read-sessions]
+use ../transcripts.nu [escape-glob read-sessions]
 
 def human [r: record]: nothing -> bool {
   $r.origin?.kind? == "human"
@@ -38,6 +38,11 @@ def reply [r: record]: nothing -> bool {
   $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
 }
 
+# Session and agent identifiers interpolated into file paths or globs.
+def valid-id [id: any]: nothing -> bool {
+  ($id | describe) == "string" and ($id =~ '^[A-Za-z0-9_-]+$')
+}
+
 # The transcript of the session that delegated to a Claude session, or null. A subagent names its
 # parent agent, and otherwise its lead. A teammate names its lead's session id.
 def parent [cfg: record, records: list, file: string]: nothing -> any {
@@ -45,9 +50,17 @@ def parent [cfg: record, records: list, file: string]: nothing -> any {
 
   if ($dir | path basename) == "subagents" {
     let meta_file = ($file | str replace --regex '\.jsonl$' ".meta.json")
-    let meta = (open --raw $meta_file | from json)
-    let parent_agent = ($meta | get -o parentAgentId)
-    if $parent_agent != null {
+    let meta = (
+      try {
+        open --raw $meta_file | from json
+      } catch {
+        null
+      }
+    )
+    let parent_agent = if ($meta | describe | str starts-with "record") {
+      $meta | get -o parentAgentId
+    }
+    if (valid-id $parent_agent) {
       $dir | path join $"agent-($parent_agent).jsonl"
     } else {
       $"($dir | path dirname).jsonl"
@@ -59,7 +72,10 @@ def parent [cfg: record, records: list, file: string]: nothing -> any {
       null
     } else {
       let id = ($team | str replace "session-" "")
-      glob $"($cfg.assistants.claude)/projects/*/($id)*.jsonl" | get -o 0
+      if (valid-id $id) {
+        let base = (escape-glob $cfg.assistants.claude)
+        glob $"($base)/projects/*/($id)*.jsonl" | get -o 0
+      }
     }
   }
 }

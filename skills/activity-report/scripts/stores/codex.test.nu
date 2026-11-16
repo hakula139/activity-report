@@ -55,14 +55,19 @@ def "test imported Codex turns do not duplicate work or hide native continuation
   ]
   let cases = [
     {name: "import only", records: $imported, native: false}
-    {name: "appended import without another marker", records: ($imported ++ $appended), native: false}
+    {
+      name: "appended import without another marker"
+      records: ($imported ++ $appended)
+      native: false
+    }
     {name: "native continuation", records: ($imported ++ $appended ++ $native), native: true}
     {name: "later import", records: ($native ++ (codex-import "12:00" "12:10")), native: true}
     {name: "prefix in prompt text", records: $native, native: true}
   ]
   for c in $cases {
     let dir = (mktemp --directory)
-    codex-transcript $dir {id: "mixed", cwd: "/work/app", source: "vscode", thread_source: null} $c.records
+    let meta = {id: "mixed", cwd: "/work/app", source: "vscode", thread_source: null}
+    codex-transcript $dir $meta $c.records
 
     let day = (digest-day $dir)
 
