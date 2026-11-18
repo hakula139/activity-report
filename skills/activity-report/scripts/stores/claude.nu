@@ -5,7 +5,7 @@
 # ==================================================================================================
 
 use ../lib/text.nu [content-text]
-use ../transcripts.nu [escape-glob read-sessions]
+use ../transcripts.nu [escape-glob read-sessions valid-id]
 
 def human [r: record]: nothing -> bool {
   $r.origin?.kind? == "human"
@@ -36,11 +36,6 @@ def question [r: record]: nothing -> any {
 # Subagents end their run with a SubagentHandback call in place of a final text reply.
 def reply [r: record]: nothing -> bool {
   $r.message.stop_reason? == "end_turn" or "SubagentHandback" in ($r.message.content | get -o name)
-}
-
-# Session and agent identifiers interpolated into file paths or globs.
-def valid-id [id: any]: nothing -> bool {
-  ($id | describe) == "string" and ($id =~ '^[A-Za-z0-9_-]+$')
 }
 
 # The transcript of the session that delegated to a Claude session, or null. A subagent names its

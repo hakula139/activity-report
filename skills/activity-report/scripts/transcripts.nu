@@ -130,6 +130,11 @@ def transcript-stem [file: string]: nothing -> string {
   $file | str replace --regex '\.zst$' ""
 }
 
+# Session and agent identifiers interpolated into file paths or globs.
+export def valid-id [id: any]: nothing -> bool {
+  ($id | describe) == "string" and ($id =~ '^[A-Za-z0-9_-]+$')
+}
+
 # Escape wax glob metacharacters in a literal path segment.
 export def escape-glob [path: string]: nothing -> string {
   $path | str replace --all --regex '([?*\[\]{}<>():,$])' '\$1'

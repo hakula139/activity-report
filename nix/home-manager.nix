@@ -28,7 +28,7 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = packageFor pkgs;
-      defaultText = lib.literalExpression "activity-report.packages.\${pkgs.stdenv.hostPlatform.system}.activity-report";
+      defaultText = lib.literalMD "activity-report from this flake";
       description = "Package that provides the `activity-report` command.";
     };
 

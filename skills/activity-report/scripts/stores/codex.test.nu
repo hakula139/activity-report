@@ -11,11 +11,31 @@ use ../lib/fixtures.testlib.nu *
 
 def "test native Codex sources retain agent work and conservative human credit" [] {
   let cases = [
-    {meta: {source: "vscode", thread_source: null}, kind: "run", hours: 0.0}
-    {meta: {source: "vscode"}, kind: "run", hours: 0.0}
-    {meta: {source: "vscode", thread_source: "user"}, kind: "prompt", hours: 0.3331}
-    {meta: {source: "exec", thread_source: "user"}, kind: "run", hours: 0.0}
-    {meta: {source: "mcp", thread_source: "user"}, kind: "run", hours: 0.0}
+    {
+      meta: {source: "vscode", thread_source: null}
+      kind: "run"
+      hours: 0.0
+    }
+    {
+      meta: {source: "vscode"}
+      kind: "run"
+      hours: 0.0
+    }
+    {
+      meta: {source: "vscode", thread_source: "user"}
+      kind: "prompt"
+      hours: 0.3331
+    }
+    {
+      meta: {source: "exec", thread_source: "user"}
+      kind: "run"
+      hours: 0.0
+    }
+    {
+      meta: {source: "mcp", thread_source: "user"}
+      kind: "run"
+      hours: 0.0
+    }
   ]
   for c in $cases {
     let dir = (mktemp --directory)
@@ -54,32 +74,55 @@ def "test imported Codex turns do not duplicate work or hide native continuation
     (codex-event "11:10" {type: "task_complete", last_agent_message: "native reply"})
   ]
   let cases = [
-    {name: "import only", records: $imported, native: false}
+    {
+      name: "import only"
+      records: $imported
+      native: false
+    }
     {
       name: "appended import without another marker"
       records: ($imported ++ $appended)
       native: false
     }
-    {name: "native continuation", records: ($imported ++ $appended ++ $native), native: true}
-    {name: "later import", records: ($native ++ (codex-import "12:00" "12:10")), native: true}
-    {name: "prefix in prompt text", records: $native, native: true}
+    {
+      name: "native continuation"
+      records: ($imported ++ $appended ++ $native)
+      native: true
+    }
+    {
+      name: "later import"
+      records: ($native ++ (codex-import "12:00" "12:10"))
+      native: true
+    }
+    {
+      name: "prefix in prompt text"
+      records: $native
+      native: true
+    }
   ]
   for c in $cases {
     let dir = (mktemp --directory)
-    let meta = {id: "mixed", cwd: "/work/app", source: "vscode", thread_source: null}
+    let meta = {
+      id: "mixed"
+      cwd: "/work/app"
+      source: "vscode"
+      thread_source: null
+    }
     codex-transcript $dir $meta $c.records
 
     let day = (digest-day $dir)
 
     let expected = if $c.native {
-      [{
-        kind: "run"
-        from: "2026-10-15T11:00:01+00:00"
-        text: "external-import-turn- is quoted text"
-        hours: 0.0
-        agent: 0.1664
-        replies: [{at: "2026-10-15T11:10:00+00:00", text: "native reply"}]
-      }]
+      [
+        {
+          kind: "run"
+          from: "2026-10-15T11:00:01+00:00"
+          text: "external-import-turn- is quoted text"
+          hours: 0.0
+          agent: 0.1664
+          replies: [{at: "2026-10-15T11:10:00+00:00", text: "native reply"}]
+        }
+      ]
     } else {
       []
     }
@@ -95,7 +138,7 @@ def "test Codex request headings are stripped from prompts" [] {
       clock: "11:00"
       done: "11:30"
       input: (
-        "
+        '
         <in-app-browser-context source="ambient-ui-state">
         page text
         ## My request:
@@ -103,7 +146,7 @@ def "test Codex request headings are stripped from prompts" [] {
         </in-app-browser-context>
         ## My request:
         summarize it
-        "
+        '
         | str dedent
       )
       expected: "summarize it"
@@ -199,7 +242,11 @@ def "test a Codex subagent finds its parent in archived sessions" [] {
 def "test both forms of an archived Codex session read once" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
-  let meta = {id: "both", cwd: $app, thread_source: "user"}
+  let meta = {
+    id: "both"
+    cwd: $app
+    thread_source: "user"
+  }
   let records = (codex-turn "11:00" "review it" --done "11:10")
   codex-transcript $dir $meta $records --archived --compressed
   codex-transcript $dir $meta $records --archived

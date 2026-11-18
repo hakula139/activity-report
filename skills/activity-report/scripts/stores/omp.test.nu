@@ -11,7 +11,11 @@ use ../lib/fixtures.testlib.nu *
 def "test OMP prompts and replies keep their text" [] {
   let dir = (mktemp --directory)
   transcript $dir ["omp/sessions/app/a.jsonl"] [
-    {type: "session", id: "omp", cwd: "/work/app"}
+    {
+      type: "session"
+      id: "omp"
+      cwd: "/work/app"
+    }
     (omp-user "10:00" "plan the parser")
     (omp-reply "10:20" "planned it")
   ]

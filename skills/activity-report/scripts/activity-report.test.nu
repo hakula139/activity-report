@@ -11,14 +11,24 @@ use ./lib/fixtures.testlib.nu *
 def "test invalid dates and reversed ranges are rejected" [] {
   let dir = (mktemp --directory)
   let cases = [
-    {name: "single-digit month", from: "2026-2-9", to: null, message: "Invalid date 2026-2-9"}
+    {
+      name: "single-digit month"
+      from: "2026-2-9"
+      to: null
+      message: "Invalid date 2026-2-9"
+    }
     {
       name: "single-digit end before range check"
       from: "2026-02-01"
       to: "2026-2-9"
       message: "Invalid date 2026-2-9"
     }
-    {name: "impossible day", from: "2026-02-30", to: null, message: "Invalid date 2026-02-30"}
+    {
+      name: "impossible day"
+      from: "2026-02-30"
+      to: null
+      message: "Invalid date 2026-02-30"
+    }
     {
       name: "reversed range"
       from: "2026-10-16"

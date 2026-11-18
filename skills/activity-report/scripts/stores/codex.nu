@@ -5,7 +5,7 @@
 # ==================================================================================================
 
 use ../lib/text.nu [content-text]
-use ../transcripts.nu [escape-glob read-sessions]
+use ../transcripts.nu [escape-glob read-sessions valid-id]
 
 # Mirrors how Codex Desktop extracts the request from a prompt.
 const REQUEST_HEADING = "## My request( for Codex)?:"
@@ -25,7 +25,7 @@ def strip-request-prefix []: string -> string {
 def parent [cfg: record, meta: record]: nothing -> any {
   let id = ($meta | get -o parent_thread_id)
 
-  if ($id | describe) != "string" or ($id !~ '^[A-Za-z0-9_-]+$') {
+  if not (valid-id $id) {
     null
   } else {
     let base = (escape-glob $cfg.assistants.codex)

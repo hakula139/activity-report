@@ -23,6 +23,7 @@ let
           options = {
             home = {
               packages = lib.mkOption { type = lib.types.anything; };
+
               file = lib.mkOption { type = lib.types.anything; };
             };
 
