@@ -108,6 +108,11 @@ def "test invalid keys and values are rejected with their dotted key" [] {
       message: "Config key `excluded_dirs` must be a list of strings"
     }
     {
+      name: "excluded dir invalid regex"
+      config: {excluded_dirs: ["["]}
+      message: "Config key `excluded_dirs` holds invalid regex `[`"
+    }
+    {
       name: "default labels type"
       config: {labels: {default: [2]}}
       message: "Config key `labels.default` must be a list of strings"
@@ -140,6 +145,12 @@ def "test invalid keys and values are rejected with their dotted key" [] {
 
     assert equal $message $"($c.message) in `($file)`" $c.name
   }
+
+  let bad = (save-config {excluded_dirs: ["["]})
+  let run = (^$nu.current-exe --no-config-file $SCRIPT config --config $bad | complete)
+
+  assert equal $run.exit_code 1
+  assert str contains $run.stderr "Config key `excluded_dirs` holds invalid regex `[`"
 }
 
 def "test hour boundaries allow zero reading and independent positive caps" [] {

@@ -190,12 +190,14 @@ def "test a continuation-only day reuses the older prompt and its evidence" [] {
   let output = (digest-output $dir --from "2026-10-16" --to "2026-10-16")
 
   assert equal $output.days.0.entries [{unit: 0, hours: 0, agent: 0.6667}]
-  assert equal ($output.units | select session from text replies) [{
-    session: $lead
-    from: "2026-10-15T22:00:00+00:00"
-    text: "P"
-    replies: [{at: "2026-10-15T22:20:00+00:00", text: "first"}]
-  }]
+  assert equal ($output.units | select session from text replies) [
+    {
+      session: $lead
+      from: "2026-10-15T22:00:00+00:00"
+      text: "P"
+      replies: [{at: "2026-10-15T22:20:00+00:00", text: "first"}]
+    }
+  ]
   assert equal $output.repositories {app: $app}
 }
 
@@ -239,22 +241,26 @@ def "test an old recursive ancestor still owns a recent continuation" [] {
 
   let output = (digest-output $dir --from "2026-10-16" --to "2026-10-16")
 
-  assert equal $output.days [{
-    date: "2026-10-16"
-    weekday: "Fri"
-    entries: [{unit: 0, hours: 0, agent: 0.5}]
-  }]
-  assert equal $output.units [{
-    kind: "prompt"
-    tool: "omp"
-    session: "lead"
-    cwd: "/work/app"
-    repo: null
-    from: "2026-10-15T22:00:00+00:00"
-    text: "original task"
-    replies: [{at: "2026-10-15T22:10:00+00:00", text: "done"}]
-    sources: [{tool: "omp", session: "leaf", cwd: "/work/app", repo: null}]
-  }]
+  assert equal $output.days [
+    {
+      date: "2026-10-16"
+      weekday: "Fri"
+      entries: [{unit: 0, hours: 0, agent: 0.5}]
+    }
+  ]
+  assert equal $output.units [
+    {
+      kind: "prompt"
+      tool: "omp"
+      session: "lead"
+      cwd: "/work/app"
+      repo: null
+      from: "2026-10-15T22:00:00+00:00"
+      text: "original task"
+      replies: [{at: "2026-10-15T22:10:00+00:00", text: "done"}]
+      sources: [{tool: "omp", session: "leaf", cwd: "/work/app", repo: null}]
+    }
+  ]
 }
 
 def "test DST days own midnight sides and repeated local clocks" [] {
@@ -338,8 +344,18 @@ def "test a local command on a later day leaves no continuation" [] {
 
 def "test a local command before more conversation leaves no continuation" [] {
   let cases = [
-    {command: "/export", prompt: "10:05", reply: "10:30", agent: 0.4167}
-    {command: "/model", prompt: "11:00", reply: "11:30", agent: 0.5}
+    {
+      command: "/export"
+      prompt: "10:05"
+      reply: "10:30"
+      agent: 0.4167
+    }
+    {
+      command: "/model"
+      prompt: "11:00"
+      reply: "11:30"
+      agent: 0.5
+    }
   ]
   for c in $cases {
     let dir = (mktemp --directory)
@@ -356,7 +372,8 @@ def "test a local command before more conversation leaves no continuation" [] {
 
     let output = (digest-output $dir --to "2026-10-16")
 
-    assert equal ($output | day-entries 1 | select text agent) [{text: "Q", agent: $c.agent}] $c.command
+    let entries = ($output | day-entries 1 | select text agent)
+    assert equal $entries [{text: "Q", agent: $c.agent}] $c.command
   }
 }
 
@@ -377,23 +394,27 @@ def "test run evidence keeps in-range intervals and their final replies" [] {
 
   let output = (digest-output $dir)
 
-  assert equal $output.units [{
-    kind: "run"
-    tool: "omp"
-    session: "run"
-    cwd: "/work/app"
-    repo: null
-    from: "2026-10-15T10:00:00+00:00"
-    text: "first task"
-    replies: [
-      {at: "2026-10-15T10:10:00+00:00", text: "first result"}
-      {at: "2026-10-16T00:10:00+00:00", text: "second result"}
-    ]
-    sources: []
-  }]
-  assert equal $output.days [{
-    date: $DAY
-    weekday: "Thu"
-    entries: [{unit: 0, hours: 0, agent: 0.4167}]
-  }]
+  assert equal $output.units [
+    {
+      kind: "run"
+      tool: "omp"
+      session: "run"
+      cwd: "/work/app"
+      repo: null
+      from: "2026-10-15T10:00:00+00:00"
+      text: "first task"
+      replies: [
+        {at: "2026-10-15T10:10:00+00:00", text: "first result"}
+        {at: "2026-10-16T00:10:00+00:00", text: "second result"}
+      ]
+      sources: []
+    }
+  ]
+  assert equal $output.days [
+    {
+      date: $DAY
+      weekday: "Thu"
+      entries: [{unit: 0, hours: 0, agent: 0.4167}]
+    }
+  ]
 }

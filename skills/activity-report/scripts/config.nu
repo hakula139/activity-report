@@ -109,6 +109,17 @@ def validate [config: record, schema: record, prefix: string, file: string]: not
       type-error $path $expected $actual $file
     } else if $expected == "list" {
       check-strings $value $path $file
+      if $path == "excluded_dirs" {
+        for pattern in $value {
+          try {
+            "" =~ $pattern | ignore
+          } catch {
+            error make {
+              msg: $"Config key `excluded_dirs` holds invalid regex `($pattern)` in `($file)`"
+            }
+          }
+        }
+      }
     }
 
     if $prefix == "hours" {

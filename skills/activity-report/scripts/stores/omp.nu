@@ -9,7 +9,12 @@ use ../transcripts.nu [read-sessions]
 
 export def sessions [cfg: record, since: datetime]: nothing -> list {
   read-sessions $cfg $since "omp" ["sessions/**/*.jsonl"] {|records, file|
-    let meta = ($records | where type == "session" | first)
+    let meta = ($records | where type? == "session" | first)
+
+    if $meta == null or $meta.id? == null or $meta.cwd? == null {
+      return null
+    }
+
     let cwd = $meta.cwd
     let events = (
       $records

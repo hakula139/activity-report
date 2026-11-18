@@ -5,7 +5,7 @@
 # ==================================================================================================
 
 use ../lib/text.nu [content-text]
-use ../transcripts.nu [read-sessions]
+use ../transcripts.nu [escape-glob read-sessions valid-id]
 
 def human [r: record]: nothing -> bool {
   $r.origin?.kind? == "human"
@@ -45,9 +45,17 @@ def parent [cfg: record, records: list, file: string]: nothing -> any {
 
   if ($dir | path basename) == "subagents" {
     let meta_file = ($file | str replace --regex '\.jsonl$' ".meta.json")
-    let meta = (open --raw $meta_file | from json)
-    let parent_agent = ($meta | get -o parentAgentId)
-    if $parent_agent != null {
+    let meta = (
+      try {
+        open --raw $meta_file | from json
+      } catch {
+        null
+      }
+    )
+    let parent_agent = if ($meta | describe | str starts-with "record") {
+      $meta | get -o parentAgentId
+    }
+    if (valid-id $parent_agent) {
       $dir | path join $"agent-($parent_agent).jsonl"
     } else {
       $"($dir | path dirname).jsonl"
@@ -59,7 +67,10 @@ def parent [cfg: record, records: list, file: string]: nothing -> any {
       null
     } else {
       let id = ($team | str replace "session-" "")
-      glob $"($cfg.assistants.claude)/projects/*/($id)*.jsonl" | get -o 0
+      if (valid-id $id) {
+        let base = (escape-glob $cfg.assistants.claude)
+        glob $"($base)/projects/*/($id)*.jsonl" | get -o 0
+      }
     }
   }
 }

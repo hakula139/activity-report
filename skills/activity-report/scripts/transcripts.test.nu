@@ -54,6 +54,59 @@ def "test NUL-only transcript records warn and preserve the remaining activity" 
   }
 }
 
+def "test empty and mid-write live transcripts are skipped cleanly" [] {
+  let dir = (mktemp --directory)
+  let app = (git-repo $dir "app")
+  let lead = "1a2b3c4d-0000-4000-8000-000000000002"
+  let special = "claude![a]$b"
+  let decoy = "claude![a]Xb"
+  transcript $dir [$special "projects/app" $"($lead).jsonl"] [
+    (claude-prompt $app "10:00" "keep working")
+    (claude-reply $app "10:20" "done")
+  ]
+  transcript $dir [$decoy "projects/app/decoy.jsonl"] [
+    (claude-prompt $app "10:30" "decoy")
+    (claude-reply $app "10:40" "done")
+  ]
+  transcript $dir [$special "projects/app" $lead "subagents/agent-sub.jsonl"] [
+    (claude-user $app "10:05" "task" {isSidechain: true})
+    ...(claude-active $app ["10:15"])
+    (claude-tool $app "10:18" "SubagentHandback" {})
+  ]
+  let meta_file = ($dir | path join $special "projects/app" $lead "subagents/agent-sub.meta.json")
+  "{" | save --force $meta_file
+  transcript $dir [$special "projects/app/bad-team.jsonl"] [
+    (claude-user $app "10:10" "work" {teamName: "session-[bad*"})
+    (claude-reply $app "10:12" "done")
+  ]
+  transcript $dir [$special "projects/app/good-team.jsonl"] [
+    (claude-user $app "10:06" "peer work" {teamName: "session-1a2b3c4d"})
+    ...(claude-active $app ["10:12"])
+    (claude-reply $app "10:12" "done")
+  ]
+
+  let empty_paths = [
+    [$special "projects/app/empty.jsonl"]
+    ["codex/sessions" ...($DAY | split row "-") $"rollout-($DAY)T00-00-00-empty.jsonl"]
+    ["omp/sessions/app/empty.jsonl"]
+  ]
+  for path in $empty_paths {
+    let file = ($dir | path join ...$path)
+    mkdir ($file | path dirname)
+    "" | save --force $file
+    with-env {TZ: "UTC"} {
+      ^touch -t 202701010000 $file
+    }
+  }
+
+  let day = (digest-day $dir {assistants: {claude: ($dir | path join $special)}})
+
+  assert equal (($day | where kind == "prompt") | select session agent) [
+    {session: $lead, agent: 0.65}
+  ]
+  assert equal (($day | where kind == "run") | select session) [{session: "bad-team"}]
+}
+
 def "test steering prompts and triggers share the first reply" [] {
   let dir = (mktemp --directory)
   transcript $dir ["claude/projects/app/a.jsonl"] [

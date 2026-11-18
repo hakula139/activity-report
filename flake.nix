@@ -60,6 +60,23 @@
           };
         };
 
+      platformKey = p: { inherit (p) config isStatic; };
+
+      packageFor =
+        pkgs:
+        let
+          locked = self.packages.${pkgs.stdenv.hostPlatform.system}.activity-report or null;
+        in
+        if
+          locked != null
+          && platformKey pkgs.stdenv.buildPlatform == platformKey locked.stdenv.buildPlatform
+          && platformKey pkgs.stdenv.hostPlatform == platformKey locked.stdenv.hostPlatform
+          && pkgs.stdenv.hostPlatform == pkgs.stdenv.targetPlatform
+        then
+          locked
+        else
+          mkActivityReport pkgs;
+
       # A key lets the module system deduplicate the module when it is imported twice.
       homeModuleKey = "${self}/flake.nix#homeModules.default";
     in
@@ -67,7 +84,7 @@
     # Overlay and Home Manager Module
     # ----------------------------------------------------------------------------------------------
     {
-      overlays.default = final: _: { activity-report = mkActivityReport final; };
+      overlays.default = _: prev: { activity-report = packageFor prev; };
 
       homeModules.default = {
         _class = "homeManager";
@@ -75,7 +92,7 @@
         key = homeModuleKey;
         imports = [
           (import ./nix/home-manager.nix {
-            inherit devkit mkActivityReport;
+            inherit devkit packageFor;
           })
         ];
       };
@@ -93,20 +110,10 @@
         preCommit = dk.preCommit {
           src = ./.;
           hooks = {
-            actionlint.enable = true;
-            check-yaml.enable = true;
-            cspell.enable = true;
-            deadnix.enable = true;
-            dprint.enable = true;
-            editorconfig-checker.enable = true;
-            markdownlint-cli2.enable = true;
-            nixfmt.enable = true;
             nu-check.enable = true;
             prettier.enable = true;
             shellcheck.enable = true;
             shfmt.enable = true;
-            sort-file-contents.enable = true;
-            statix.enable = true;
           };
         };
       in
@@ -146,6 +153,7 @@
             activityReport
             ;
           homeModule = self.homeModules.default;
+          overlay = self.overlays.default;
         };
 
         # ------------------------------------------------------------------------------------------

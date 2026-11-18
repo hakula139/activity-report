@@ -9,10 +9,19 @@
   commonInputs,
   activityReport,
   homeModule,
+  overlay,
 }:
 
 {
-  home-module = import ./home-module { inherit pkgs lib homeModule; };
+  home-module = import ./home-module {
+    inherit
+      pkgs
+      lib
+      activityReport
+      homeModule
+      overlay
+      ;
+  };
 
   package = activityReport;
 
