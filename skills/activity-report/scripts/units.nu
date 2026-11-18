@@ -28,7 +28,8 @@ export def link []: list -> list {
   let parents = (
     $sessions
     | where {|s| $s.parent != null and $s.parent in $transcripts }
-    | reduce --fold {} {|s, acc| $acc | insert $s.transcript $s.parent }
+    | each {|s| [$s.transcript $s.parent] }
+    | into record
   )
   let ordered = ($sessions | sort-by {|s| depth $parents $s.transcript })
   let units = (

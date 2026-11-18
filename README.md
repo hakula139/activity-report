@@ -7,9 +7,7 @@ Reconstruct what you worked on over a date range, with human and agent hours per
 
 ## How it works
 
-Coding agents already record what happened. Each session stores its working directory, every prompt and answer, and which subagents or workers it started. That record is spread across three stores with different formats, and it holds no notion of a project or a task. Turning it into an activity report by hand means reading every transcript and guessing how its turns divide.
-
-`activity-report digest` reads those stores and prints one JSON document for a range of local dates. It stores each unit's prompt, replies, working directory, and contributing sessions once, with daily entries carrying human and agent estimates. The [agent skill](skills/activity-report/SKILL.md) turns that evidence into an hours-by-project and hours-by-task report.
+`activity-report digest` reads the three transcript formats and prints one JSON document for a range of local dates. It links delegated work to the prompt that started it and estimates human and agent hours for each day. The [agent skill](skills/activity-report/SKILL.md) uses the prompts, replies, and working directories to group those hours by project and task.
 
 ## Install
 
@@ -107,7 +105,7 @@ activity-report digest 2026-10-12 2026-10-16
 activity-report digest --config ./config.toml --excerpt-chars 0 2026-10-12
 ```
 
-Dates are local `YYYY-MM-DD` dates. Omitting the second date reports the first day alone, and the second date must not precede the first. `--excerpt-chars` keeps the first N characters of each prompt and reply, and `0` keeps the text whole, which is useful when a whole transcript must be inspected.
+Dates are local and use `YYYY-MM-DD` format. Leading zeros are optional for the month and day. Give the dates in chronological order to include both endpoints, or pass one date for a single day. `--excerpt-chars` keeps the first N characters of each prompt and reply, and `0` keeps the full text.
 
 ### Resolved configuration
 

@@ -8,20 +8,24 @@ use std/assert
 
 use ./lib/fixtures.testlib.nu *
 
+const SCRIPT = path self "activity-report.nu"
+
+def "test single-digit date components normalize on both ends of the range" [] {
+  let dir = (mktemp --directory)
+
+  let output = (digest-output $dir --from "2026-2-9" --to "2026-2-10")
+
+  assert equal ($output.days | get date) ["2026-02-09" "2026-02-10"]
+}
+
 def "test invalid dates and reversed ranges are rejected" [] {
   let dir = (mktemp --directory)
   let cases = [
     {
-      name: "single-digit month"
-      from: "2026-2-9"
+      name: "short year"
+      from: "26-2-9"
       to: null
-      message: "Invalid date 2026-2-9"
-    }
-    {
-      name: "single-digit end before range check"
-      from: "2026-02-01"
-      to: "2026-2-9"
-      message: "Invalid date 2026-2-9"
+      message: "Invalid date 26-2-9"
     }
     {
       name: "impossible day"
@@ -52,4 +56,14 @@ def "test a negative excerpt length is rejected" [] {
 
   assert equal $run.exit_code 1
   assert str contains $run.stderr "must be 0 or greater"
+}
+
+def "test an invalid config is a CLI error" [] {
+  let file = (mktemp --directory | path join "config.toml")
+  {excluded_dirs: ["["]} | to toml | save $file
+
+  let run = (^$nu.current-exe --no-config-file $SCRIPT config --config $file | complete)
+
+  assert equal $run.exit_code 1
+  assert str contains $run.stderr "Config key `excluded_dirs` holds invalid regex `[`"
 }

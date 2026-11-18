@@ -30,12 +30,42 @@ def "test repositories resolve subdirectories and worktrees, and missing paths r
   )
   mkdir ($dir | path join "scratch")
   let cases = [
-    {name: "sub", clock: "10:00", cwd: ($app | path join "src"), repo: "app"}
-    {name: "linked", clock: "10:01", cwd: $linked, repo: "app"}
-    {name: "live", clock: "10:02", cwd: $live, repo: "app"}
-    {name: "gone", clock: "10:03", cwd: ($dir | path join "app__worktrees/gone"), repo: "app"}
-    {name: "scratch", clock: "10:04", cwd: ($dir | path join "scratch"), repo: null}
-    {name: "gone-wt", clock: "10:05", cwd: ($dir | path join "app-wt/gone"), repo: null}
+    {
+      name: "sub"
+      clock: "10:00"
+      cwd: ($app | path join "src")
+      repo: "app"
+    }
+    {
+      name: "linked"
+      clock: "10:01"
+      cwd: $linked
+      repo: "app"
+    }
+    {
+      name: "live"
+      clock: "10:02"
+      cwd: $live
+      repo: "app"
+    }
+    {
+      name: "gone"
+      clock: "10:03"
+      cwd: ($dir | path join "app__worktrees/gone")
+      repo: "app"
+    }
+    {
+      name: "scratch"
+      clock: "10:04"
+      cwd: ($dir | path join "scratch")
+      repo: null
+    }
+    {
+      name: "gone-wt"
+      clock: "10:05"
+      cwd: ($dir | path join "app-wt/gone")
+      repo: null
+    }
   ]
   for c in $cases {
     transcript $dir ["claude/projects" $c.name $"($c.name).jsonl"] [

@@ -1,8 +1,9 @@
 {
   "version": "0.2",
   "language": "en",
+  "enableGlobDot": true,
   "useGitignore": true,
-  "allowCompoundWords": true,
+  "gitignoreRoot": ".",
   "dictionaryDefinitions": [
     {
       "name": "project-words",
@@ -11,5 +12,5 @@
     }
   ],
   "dictionaries": ["project-words"],
-  "ignorePaths": ["flake.lock"]
+  "ignorePaths": [".git", "flake.lock"]
 }

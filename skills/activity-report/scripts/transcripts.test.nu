@@ -7,6 +7,7 @@
 use std/assert
 
 use ./lib/fixtures.testlib.nu *
+use ./transcripts.nu [glob-under]
 
 def "test NUL-only transcript records warn and preserve the remaining activity" [] {
   for tool in ["claude" "codex"] {
@@ -58,8 +59,11 @@ def "test empty and mid-write live transcripts are skipped cleanly" [] {
   let dir = (mktemp --directory)
   let app = (git-repo $dir "app")
   let lead = "1a2b3c4d-0000-4000-8000-000000000002"
-  let special = "claude![a]$b"
-  let decoy = "claude![a]Xb"
+  let special = 'claude![a]\$b'
+  let store = ($dir | path join $special)
+  let decoy = "claude![a]$b"
+  mkdir ($dir | path join "real")
+  ^ln -s ($dir | path join "real") $store
   transcript $dir [$special "projects/app" $"($lead).jsonl"] [
     (claude-prompt $app "10:00" "keep working")
     (claude-reply $app "10:20" "done")
@@ -99,8 +103,10 @@ def "test empty and mid-write live transcripts are skipped cleanly" [] {
     }
   }
 
-  let day = (digest-day $dir {assistants: {claude: ($dir | path join $special)}})
+  let matches = (glob-under $store "projects/*/good-team.jsonl")
+  let day = (digest-day $dir {assistants: {claude: $store}})
 
+  assert equal $matches [($store | path join "projects/app/good-team.jsonl")]
   assert equal (($day | where kind == "prompt") | select session agent) [
     {session: $lead, agent: 0.65}
   ]
@@ -181,21 +187,27 @@ def "test canceled Codex turns cannot borrow a later reply" [] {
   assert equal ($day | get replies | flatten) [{at: "2026-10-15T13:12:00+00:00", text: "final"}]
 }
 
-def "test a turn ends at its first long gap" [] {
+def "test each turn ends at the last record before its first long gap" [] {
   let dir = (mktemp --directory)
-  transcript $dir ["claude/projects/app/a.jsonl"] [
+  let project = "claude/projects/app"
+  transcript $dir [$project "first-gap.jsonl"] [
     (claude-notification "/work/app" "10:00")
     ...(claude-active "/work/app" ["10:10" "10:50" "11:00" "12:00"])
     (claude-reply "/work/app" "12:05")
   ]
+  transcript $dir [$project "threshold.jsonl"] [
+    (claude-notification "/work/app" "10:00")
+    ...(claude-active "/work/app" ["10:30"])
+    (claude-reply "/work/app" "11:00")
+  ]
+  transcript $dir [$project "later-turn.jsonl"] [
+    (claude-notification "/work/app" "10:00")
+    ...(claude-active "/work/app" ["10:05"])
+    (claude-notification "/work/app" "10:10")
+    ...(claude-active "/work/app" ["10:15" "10:20"])
+    (claude-reply "/work/app" "11:30")
+  ]
 
-  let day = (digest-day $dir)
-
-  assert equal ($day | where kind == "run" | first).agent 0.1667
-}
-
-def "test each tool turn ends at its last record before a long gap" [] {
-  let dir = (mktemp --directory)
   let item = {type: "UserMessage", content: [{type: "text", text: "go"}]}
   codex-transcript $dir {id: "codex", cwd: "/work/app", thread_source: "user", source: "exec"} [
     (codex-event "10:00" {type: "task_started", turn_id: "t"})
@@ -212,38 +224,18 @@ def "test each tool turn ends at its last record before a long gap" [] {
 
   let day = (digest-day $dir)
 
-  assert equal (($day | where kind == "run") | select tool agent) [
-    {tool: "codex", agent: 0.3333}
-    {tool: "omp", agent: 0.3333}
+  assert equal (
+    $day
+    | where kind == "run"
+    | select session tool agent
+    | sort-by session
+  ) [
+    {session: "codex", tool: "codex", agent: 0.3333}
+    {session: "first-gap", tool: "claude", agent: 0.1667}
+    {session: "later-turn", tool: "claude", agent: 0.3333}
+    {session: "omp", tool: "omp", agent: 0.3333}
+    {session: "threshold", tool: "claude", agent: 1}
   ]
-}
-
-def "test a gap of exactly the idle threshold keeps the turn span" [] {
-  let dir = (mktemp --directory)
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-notification "/work/app" "10:00")
-    ...(claude-active "/work/app" ["10:30"])
-    (claude-reply "/work/app" "11:00")
-  ]
-
-  let day = (digest-day $dir)
-
-  assert equal ($day | where kind == "run" | first).agent 1
-}
-
-def "test a later turn gap does not cut an earlier turn" [] {
-  let dir = (mktemp --directory)
-  transcript $dir ["claude/projects/app/a.jsonl"] [
-    (claude-notification "/work/app" "10:00")
-    ...(claude-active "/work/app" ["10:05"])
-    (claude-notification "/work/app" "10:10")
-    ...(claude-active "/work/app" ["10:15" "10:20"])
-    (claude-reply "/work/app" "11:30")
-  ]
-
-  let day = (digest-day $dir)
-
-  assert equal ($day | where kind == "run" | first).agent 0.3333
 }
 
 def "test a stalled delegate earns only the time before its gap" [] {

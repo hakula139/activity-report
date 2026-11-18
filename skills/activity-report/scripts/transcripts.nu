@@ -4,8 +4,6 @@
 # Reading transcripts, idle pauses, and the event-to-turn projection.
 # ==================================================================================================
 
-use ./lib/dates.nu [local-time]
-
 # A transcript may end in a partial line while its session is still being written.
 def read-transcript [file: string]: nothing -> list {
   let raw = if ($file | str ends-with ".zst") {
@@ -105,17 +103,12 @@ def read-session [cfg: record, tool: string, parse: closure, file: string]: noth
     | sort
     | window 2
     | where {|w| ($w.1 - $w.0) > $gap }
-    | each {|w|
-      {
-        kind: "pause"
-        ts: $w.0
-      }
-    }
+    | each {|w| {kind: "pause", ts: $w.0} }
   )
   let events = (
     $session.events
     | append $pauses
-    | update ts { local-time }
+    | update ts { into datetime | into int | into datetime --timezone "local" }
     | sort-by ts
   )
   $session | reject events | merge {
@@ -132,12 +125,21 @@ def transcript-stem [file: string]: nothing -> string {
 
 # Session and agent identifiers interpolated into file paths or globs.
 export def valid-id [id: any]: nothing -> bool {
-  ($id | describe) == "string" and ($id =~ '^[A-Za-z0-9_-]+$')
+  ($id | describe --detailed | get type) == "string" and ($id =~ '^[A-Za-z0-9_-]+$')
 }
 
-# Escape wax glob metacharacters in a literal path segment.
-export def escape-glob [path: string]: nothing -> string {
-  $path | str replace --all --regex '([?*\[\]{}<>():,$])' '\$1'
+# Match relative patterns while preserving the caller's spelling of the base path.
+export def glob-under [dir: string, ...patterns: string]: nothing -> list<string> {
+  let resolved = ($dir | path expand)
+  if ($resolved | path type) != "dir" { return [] }
+
+  do {
+    cd $resolved
+    $patterns
+    | each {|pattern| glob --no-dir $pattern }
+    | flatten
+    | each {|file| $dir | path join ($file | path relative-to $resolved) }
+  }
 }
 
 # Read recent transcripts and their ancestor closure. The parser maps records and a file to
@@ -149,11 +151,9 @@ export def read-sessions [
   globs: list<string>
   parse: closure
 ]: nothing -> list {
-  let base = (escape-glob ($cfg.assistants | get $tool))
+  let base = ($cfg.assistants | get $tool)
   let files = (
-    $globs
-    | each {|pattern| glob ($base | path join $pattern) }
-    | flatten
+    glob-under $base ...$globs
     | each {|file|
       {
         file: $file

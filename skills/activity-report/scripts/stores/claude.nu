@@ -5,7 +5,7 @@
 # ==================================================================================================
 
 use ../lib/text.nu [content-text]
-use ../transcripts.nu [escape-glob read-sessions valid-id]
+use ../transcripts.nu [glob-under read-sessions valid-id]
 
 def human [r: record]: nothing -> bool {
   $r.origin?.kind? == "human"
@@ -15,7 +15,7 @@ def human [r: record]: nothing -> bool {
 def question [r: record]: nothing -> any {
   let result = $r.toolUseResult?
 
-  if not ($result | describe | str starts-with "record") {
+  if ($result | describe --detailed | get type) != "record" {
     return null
   }
 
@@ -52,7 +52,7 @@ def parent [cfg: record, records: list, file: string]: nothing -> any {
         null
       }
     )
-    let parent_agent = if ($meta | describe | str starts-with "record") {
+    let parent_agent = if ($meta | describe --detailed | get type) == "record" {
       $meta | get -o parentAgentId
     }
     if (valid-id $parent_agent) {
@@ -68,8 +68,7 @@ def parent [cfg: record, records: list, file: string]: nothing -> any {
     } else {
       let id = ($team | str replace "session-" "")
       if (valid-id $id) {
-        let base = (escape-glob $cfg.assistants.claude)
-        glob $"($base)/projects/*/($id)*.jsonl" | get -o 0
+        glob-under $cfg.assistants.claude $"projects/*/($id)*.jsonl" | first
       }
     }
   }
