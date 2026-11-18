@@ -45,7 +45,7 @@
         pkgs:
         (devkit.lib.mkLib pkgs).mkNuApplication {
           pname = "activity-report";
-          version = "0.2.1";
+          version = "0.2.2";
           src = ./skills/activity-report/scripts;
           skills = [ ./skills/activity-report ];
           runtimeInputs = runtimeInputs pkgs;
