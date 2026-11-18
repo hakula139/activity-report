@@ -4,11 +4,15 @@
 # Daily credit for each unit.
 # ==================================================================================================
 
-use ./lib/dates.nu [next-day]
 use ./units.nu [agent-hours]
 
-export def day [cfg: record, start: datetime, credited: list, units: record]: nothing -> record {
-  let end = ($start | next-day)
+export def day [
+  cfg: record
+  start: datetime
+  end: datetime
+  credited: list
+  units: record
+]: nothing -> record {
   let prompts = ($credited | where ts >= $start and ts < $end)
   let entries = (
     $units

@@ -8,6 +8,7 @@ use ../lib/text.nu [content-text]
 use ../transcripts.nu [read-sessions]
 
 export def sessions [cfg: record, since: datetime]: nothing -> list {
+  let store = ($cfg.assistants.omp | path join "sessions")
   read-sessions $cfg $since "omp" ["sessions/**/*.jsonl"] {|records, file|
     let meta = ($records | where type? == "session" | first)
 
@@ -42,11 +43,12 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
       | compact
     )
 
+    let depth = ($file | path relative-to $store | path split | length)
     {
       id: $meta.id
       cwd: $cwd
       attended: true
-      parent: $"($file | path dirname).jsonl"
+      parent: (if $depth > 2 { $"($file | path dirname).jsonl" })
       events: $events
     }
   }

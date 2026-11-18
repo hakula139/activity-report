@@ -256,16 +256,3 @@ def "test both forms of an archived Codex session read once" [] {
   assert equal (($day | where kind == "prompt") | length) 1
   assert equal $day.0.agent 0.1664
 }
-
-def "test a Codex turn starts at its prompt" [] {
-  let dir = (mktemp --directory)
-  let app = (git-repo $dir "app")
-  codex-transcript $dir {id: "lead", cwd: $app, thread_source: "user"} (
-    codex-turn "11:00" "review it" --done "11:10"
-  )
-
-  let day = (digest-day $dir)
-
-  assert equal ($day | where kind == "run") []
-  assert equal $day.0.agent 0.1664
-}

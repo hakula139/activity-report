@@ -65,12 +65,10 @@ def repository-of [dir: string]: nothing -> any {
     null
   } else {
     let parts = ($run.stdout | lines)
-    {
-      root: (if $parts.0 == $parts.1 {
-        $parts.2
-      } else {
-        $parts.1 | path dirname
-      })
+    if $parts.0 == $parts.1 {
+      $parts.2
+    } else {
+      $parts.1 | path dirname
     }
   }
 }
@@ -84,18 +82,10 @@ export def repository-map [dirs: list<string>]: nothing -> record {
     | get ancestor
     | compact
     | uniq
-    | reduce --fold {} {|ancestor, acc| $acc | insert $ancestor (repository-of $ancestor) }
+    | each {|ancestor| [$ancestor (repository-of $ancestor)] }
+    | into record
   )
-  $pairs | reduce --fold {} {|pair, acc| $acc | insert $pair.dir ($found | get -o $pair.ancestor) }
-}
-
-# The directory name of a repository, or null.
-export def repo-name [repo: any]: nothing -> any {
-  if $repo == null {
-    null
-  } else {
-    $repo.root | path basename
-  }
+  $pairs | each {|pair| [$pair.dir ($found | get -o $pair.ancestor)] } | into record
 }
 
 # --------------------------------------------------------------------------------------------------
@@ -105,15 +95,10 @@ export def repo-name [repo: any]: nothing -> any {
 # Every repository named in the output, mapped to its root. A repeated directory name keeps the
 # first root found.
 export def repositories [repos: record, names: list<string>]: nothing -> record {
-  let found = ($repos | values | compact | uniq-by root)
+  let found = ($repos | values | compact | group-by {|root| $root | path basename })
 
   $names
-  | reduce --fold {} {|name, acc|
-    let root = ($found | where {|repo| ($repo.root | path basename) == $name } | get -o 0.root)
-    if $root == null {
-      $acc
-    } else {
-      $acc | insert $name $root
-    }
-  }
+  | where {|name| $name in $found }
+  | each {|name| [$name ($found | get $name | first)] }
+  | into record
 }

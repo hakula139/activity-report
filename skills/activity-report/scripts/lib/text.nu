@@ -7,7 +7,7 @@
 # A message's content is a string or a list of typed parts, of which only text parts carry text.
 export def content-text []: any -> string {
   let content = $in
-  if ($content | describe) == "string" {
+  if ($content | describe --detailed | get type) == "string" {
     $content
   } else {
     $content

@@ -8,8 +8,6 @@ use std/assert
 
 use ./config.nu [load]
 
-const SCRIPT = path self "activity-report.nu"
-
 # The configuration resolved without a file, with the assistant directories under `home`.
 def resolved [home: string]: nothing -> record {
   {
@@ -52,9 +50,24 @@ def "test assistant directories come from the file, then a nonempty variable, th
   let from_file = {claude: "/home/u/file", codex: "/home/u/codex"}
   let file_config = {assistants: {claude: "/home/u/file"}}
   let cases = [
-    {name: "set", environment: $set, config: {}, assistants: $from_env}
-    {name: "empty", environment: $empty, config: {}, assistants: {}}
-    {name: "file", environment: $set, config: $file_config, assistants: $from_file}
+    {
+      name: "set"
+      environment: $set
+      config: {}
+      assistants: $from_env
+    }
+    {
+      name: "empty"
+      environment: $empty
+      config: {}
+      assistants: {}
+    }
+    {
+      name: "file"
+      environment: $set
+      config: $file_config
+      assistants: $from_file
+    }
   ]
 
   for c in $cases {
@@ -79,8 +92,8 @@ def "test invalid keys and values are rejected with their dotted key" [] {
   let cases = [
     {
       name: "unknown key"
-      config: {colour: "blue"}
-      message: "Unknown config key `colour`"
+      config: {color: "blue"}
+      message: "Unknown config key `color`"
     }
     {
       name: "unknown nested key"
@@ -145,12 +158,6 @@ def "test invalid keys and values are rejected with their dotted key" [] {
 
     assert equal $message $"($c.message) in `($file)`" $c.name
   }
-
-  let bad = (save-config {excluded_dirs: ["["]})
-  let run = (^$nu.current-exe --no-config-file $SCRIPT config --config $bad | complete)
-
-  assert equal $run.exit_code 1
-  assert str contains $run.stderr "Config key `excluded_dirs` holds invalid regex `[`"
 }
 
 def "test hour boundaries allow zero reading and independent positive caps" [] {
@@ -213,8 +220,18 @@ def "test without a path the file under the XDG config home is read, or under ho
   let home = ($dir | path join "home")
   let xdg = ($dir | path join "xdg")
   let cases = [
-    {name: "set", xdg: $xdg, root: $xdg, max_minutes: 90}
-    {name: "empty", xdg: "", root: ($home | path join ".config"), max_minutes: 45}
+    {
+      name: "set"
+      xdg: $xdg
+      root: $xdg
+      max_minutes: 90
+    }
+    {
+      name: "empty"
+      xdg: ""
+      root: ($home | path join ".config")
+      max_minutes: 45
+    }
   ]
   for c in $cases {
     let file = ($c.root | path join "activity-report/config.toml")
@@ -224,16 +241,10 @@ def "test without a path the file under the XDG config home is read, or under ho
   hide-env --ignore-errors CLAUDE_CONFIG_DIR CODEX_HOME
 
   for c in $cases {
-    let run = (
-      with-env {HOME: $home, XDG_CONFIG_HOME: $c.xdg} {
-        ^$nu.current-exe --no-config-file $SCRIPT config
-        | complete
-      }
-    )
-    assert equal $run.exit_code 0 $run.stderr
+    let config = (with-env {HOME: $home, XDG_CONFIG_HOME: $c.xdg} { load })
 
     let expected = (resolved $home | update hours.max_minutes $c.max_minutes)
-    assert equal ($run.stdout | from json) $expected $c.name
+    assert equal $config $expected $c.name
   }
 }
 

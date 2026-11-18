@@ -9,8 +9,8 @@
 
 {
   config,
-  lib,
   pkgs,
+  lib,
   ...
 }:
 
@@ -46,11 +46,13 @@ in
   # ------------------------------------------------------------------------------------------------
   config = lib.mkIf cfg.enable {
     home.packages = [ cfg.package ];
+
     home.file = devkit.lib.skillLinks {
       inherit (cfg) package;
       name = "activity-report";
       directories = cfg.skillDirectories;
     };
+
     xdg.configFile = lib.mkIf (cfg.settings != { }) {
       "activity-report/config.toml".source = toml.generate "config.toml" cfg.settings;
     };

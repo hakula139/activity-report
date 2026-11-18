@@ -32,22 +32,19 @@
       self,
       nixpkgs,
       devkit,
-      ...
     }:
     let
       inherit (nixpkgs) lib;
 
-      runtimeInputs =
-        pkgs: with pkgs; [
-          git
-          zstd
-        ];
+      runtimeInputs = pkgs: [
+        pkgs.git
+        pkgs.zstd
+      ];
 
       mkActivityReport =
         pkgs:
         (devkit.lib.mkLib pkgs).mkNuApplication {
           pname = "activity-report";
-          entry = "activity-report";
           version = "0.2.1";
           src = ./skills/activity-report/scripts;
           skills = [ ./skills/activity-report ];
@@ -144,7 +141,7 @@
         # ------------------------------------------------------------------------------------------
         # Checks
         # ------------------------------------------------------------------------------------------
-        checks = import ./tests {
+        checks = import ./nix/checks.nix {
           inherit
             pkgs
             lib

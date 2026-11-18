@@ -5,7 +5,7 @@
 # ==================================================================================================
 
 use ../lib/text.nu [content-text]
-use ../transcripts.nu [escape-glob read-sessions valid-id]
+use ../transcripts.nu [glob-under read-sessions valid-id]
 
 # Mirrors how Codex Desktop extracts the request from a prompt.
 const REQUEST_HEADING = "## My request( for Codex)?:"
@@ -28,14 +28,12 @@ def parent [cfg: record, meta: record]: nothing -> any {
   if not (valid-id $id) {
     null
   } else {
-    let base = (escape-glob $cfg.assistants.codex)
     (
-      (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl")
-      ++ (glob $"($base)/sessions/*/*/*/rollout-*-($id).jsonl.zst")
-      ++ (glob $"($base)/archived_sessions/rollout-*-($id).jsonl")
-      ++ (glob $"($base)/archived_sessions/rollout-*-($id).jsonl.zst")
+      glob-under $cfg.assistants.codex
+        $"sessions/*/*/*/rollout-*-($id).{jsonl,jsonl.zst}"
+        $"archived_sessions/rollout-*-($id).{jsonl,jsonl.zst}"
     )
-    | get -o 0
+    | first
   }
 }
 
@@ -49,7 +47,7 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
     let meta = ($records | get -o 0.payload)
 
     if (
-      not ($meta | describe | str starts-with "record")
+      ($meta | describe --detailed | get type) != "record"
       or $meta.id? == null
       or $meta.cwd? == null
     ) {
@@ -97,8 +95,13 @@ export def sessions [cfg: record, since: datetime]: nothing -> list {
         let model = if (
           $r.type == "response_item"
           and (
-            $r.payload.type? in ["agent_message" "reasoning" "function_call" "custom_tool_call"]
-            or $r.payload.type? == "compaction"
+            $r.payload.type? in [
+              "agent_message"
+              "reasoning"
+              "function_call"
+              "custom_tool_call"
+              "compaction"
+            ]
             or $r.payload.role? == "assistant"
           )
         ) {

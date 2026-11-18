@@ -9,8 +9,7 @@
 
 use ./config.nu [load]
 use ./days.nu [day]
-use ./lib/dates.nu [day-start next-day]
-use ./repos.nu [repo-name repositories repository-map]
+use ./repos.nu [repositories repository-map]
 use ./stores/claude.nu
 use ./stores/codex.nu
 use ./stores/omp.nu
@@ -20,20 +19,14 @@ use ./units.nu [credit-prompts evidence link]
 # Entry point
 # --------------------------------------------------------------------------------------------------
 
-def check-date [date: string]: nothing -> nothing {
-  let valid = (
-    ($date =~ '^\d{4}-\d{2}-\d{2}$')
-    and (
-      try {
-        ($date | into datetime --format "%Y-%m-%d" | format date "%Y-%m-%d") == $date
-      } catch {
-        false
-      }
-    )
-  )
+def parse-date [date: string]: nothing -> string {
+  let invalid = {msg: $"Invalid date ($date), expected YYYY-MM-DD"}
+  if $date !~ '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$' { error make $invalid }
 
-  if not $valid {
-    error make {msg: $"Invalid date ($date), expected YYYY-MM-DD"}
+  try {
+    $date | into datetime --format "%Y-%m-%d" | format date "%Y-%m-%d"
+  } catch {
+    error make $invalid
   }
 }
 
@@ -52,8 +45,8 @@ def main [...rest: string] {
 
 # Print the agent sessions on this host for a range of local dates as JSON.
 #
-# The output's fields are documented under Output in the README:
-# https://github.com/hakula139/activity-report#output
+# Output field reference
+# https://github.com/hakula139/activity-report/blob/main/skills/activity-report/references/output.md
 def "main digest" [
   from: string # First local date, as YYYY-MM-DD
   to?: string # Last local date, as YYYY-MM-DD, the first date by default
@@ -61,10 +54,8 @@ def "main digest" [
   --excerpt-chars: int = 400 # Characters kept per prompt and reply, or 0 for the whole text
 ]: nothing -> nothing {
   let cfg = (load $config)
-  let to = ($to | default $from)
-
-  check-date $from
-  check-date $to
+  let from = (parse-date $from)
+  let to = (parse-date ($to | default $from))
 
   if $to < $from {
     error make {msg: $"Last date ($to) precedes first date ($from)"}
@@ -74,8 +65,13 @@ def "main digest" [
     error make {msg: $"Excerpt length ($excerpt_chars) must be 0 or greater"}
   }
 
-  let days = (seq date --begin-date $from --end-date $to | each { day-start })
-  let since = ($days | first)
+  let dates = (seq date --begin-date $from --end-date $to)
+  let boundaries = (
+    seq date --begin-date $from --days (($dates | length) + 1)
+    | each { into datetime }
+  )
+  let since = ($boundaries | first)
+  let until = ($boundaries | last)
   let sessions = (
     (claude sessions $cfg $since) ++ (codex sessions $cfg $since) ++ (omp sessions $cfg $since)
   )
@@ -89,26 +85,26 @@ def "main digest" [
 
   let dirs = ($linked | get cwd | uniq)
   let repos = (repository-map $dirs)
-  let linked = ($linked | each {|s| $s | insert repo (repo-name ($repos | get -o $s.cwd)) })
+  let linked = (
+    $linked
+    | each {|s|
+      let root = ($repos | get -o $s.cwd)
+      $s | insert repo (if $root != null { $root | path basename })
+    }
+  )
 
   let units = ($turns | group-by unit)
   let credited = ($linked | credit-prompts $cfg)
 
   let days = (
-    $days
-    | each {|start| day $cfg $start $credited $units }
+    $boundaries
+    | window 2
+    | each {|w| day $cfg $w.0 $w.1 $credited $units }
   )
   let selected = ($days | get entries | flatten | get unit | uniq)
-  let indices = (
-    $selected
-    | enumerate
-    | reduce --fold {} {|u, acc| $acc | insert $u.item $u.index }
-  )
-  let units = (
-    $selected
-    | reduce --fold {} {|unit, acc| $acc | insert $unit ($units | get $unit) }
-    | evidence $linked $credited $since ($days | last | get date | next-day) $excerpt_chars
-  )
+  let indices = ($selected | enumerate | each {|u| [$u.item $u.index] } | into record)
+  let chosen = if ($selected | is-empty) { {} } else { $units | select ...$selected }
+  let units = ($chosen | evidence $linked $credited $since $until $excerpt_chars)
   let names = (
     ($units | get repo) ++ ($units | get sources | flatten | get -o repo)
     | compact
